@@ -1,0 +1,10 @@
+{
+  "name": "fasterfood-pos",
+  "version": "1.0.0",
+  "description": "FasterFood POS - local network point of sale with shared data",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "license": "UNLICENSED"
+}

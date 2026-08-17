@@ -1,0 +1,1527 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FasterFood POS</title>
+    <script>
+      try {
+        if (localStorage.getItem('ff_session')) {
+          document.documentElement.classList.add('app-logged-in');
+        }
+      } catch (e) {}
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div id="login-view" class="view">
+      <div class="login-shell">
+        <div class="login-card login-split">
+          <div class="login-brand-side">
+            <div class="login-logo-badge">
+              <img src="log.png" alt="Logo" />
+            </div>
+            <h1 id="login-brand-name">FasterFood</h1>
+            <p>Fast food point of sale and inventory control</p>
+            <ul class="login-features">
+              <li>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>
+                <span>Shift &amp; cashier management</span>
+              </li>
+              <li>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>
+                <span>Live inventory &amp; stock alerts</span>
+              </li>
+              <li>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>
+                <span>Reports, shifts &amp; void control</span>
+              </li>
+            </ul>
+          </div>
+          <div class="login-form-side">
+            <div class="brand-mark-img">
+              <img src="logo.png" alt="Logo" />
+            </div>
+            <h2 id="login-greeting">
+              <span id="login-greeting-text">Welcome back</span>
+              <span class="greet-emoji" id="login-greeting-emoji">🌙</span>
+            </h2>
+            <p class="login-sub" id="login-greeting-sub">Sign in to continue</p>
+
+            <div class="field-group stacked login-field">
+              <label>Username</label>
+              <div class="input-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg>
+                <input id="username" type="text" placeholder="Enter username" autocomplete="username" />
+              </div>
+            </div>
+
+            <div class="field-group stacked login-field">
+              <label>Password</label>
+              <div class="input-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+                <input id="password" type="password" placeholder="Enter password" autocomplete="current-password" onkeydown="if(event.key==='Enter'){login();}" />
+              </div>
+            </div>
+
+            <div class="login-actions">
+              <button class="primary-btn" onclick="login()">Sign In</button>
+              <button type="button" class="osk-toggle-btn" onclick="toggleOnScreenKeyboard(this)" title="Show on-screen keyboard" aria-label="Toggle on-screen keyboard" aria-expanded="false">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4.5" width="20" height="15" rx="2.5"/><path d="M6 8.5h.01M9.5 8.5h.01M13 8.5h.01M16.5 8.5h.01M18 8.5h.01"/><path d="M6 12.5h.01M9.5 12.5h.01M13 12.5h.01M16.5 12.5h.01M18 12.5h.01"/><path d="M8 16h8"/></svg>
+              </button>
+            </div>
+            <div class="login-built">
+                <span>Built by</span>
+                <span class="built-name">CHARITEC CONCEPTS</span>
+                <span class="built-phone">07036982566</span>
+              </div>
+            <div id="login-error" class="login-error"></div>
+          </div>
+        </div>
+      </div>
+      <div id="on-screen-keyboard" class="osk hidden"></div>
+    </div>
+
+    <div id="app-view" class="view">
+      <button class="nav-toggle" id="nav-toggle" onclick="toggleNav()" aria-label="Toggle navigation menu">
+        <span class="bar"></span><span class="bar"></span><span class="bar"></span>
+      </button>
+      <div class="stock-alert-bell hidden" id="stock-alert-bell" onclick="toggleStockAlertPanel()" title="Stock alerts">
+        <span class="bell-icon">🔔</span>
+        <span class="stock-alert-badge" id="stock-alert-badge">0</span>
+      </div>
+      <div class="stock-alert-panel hidden" id="stock-alert-panel">
+        <div class="stock-alert-head">
+          <strong>Stock alerts</strong>
+          <button class="alert-close" onclick="closeStockAlertPanel()">✕</button>
+        </div>
+        <div id="stock-alert-list"></div>
+      </div>
+
+      <div id="shift-gate" class="shift-gate hidden">
+        <div class="shift-gate-card">
+          <h3>Start your shift</h3>
+          <p id="shift-gate-msg">Select your shift below to begin selling.</p>
+          <div id="shift-gate-list"></div>
+        </div>
+      </div>
+
+      <aside class="sidebar">
+        <div class="brand-row">
+          <div class="brand-icon"><img src="logo.png" alt="Logo" /></div>
+          <div>
+            <div class="brand-name" id="nav-brand-name">FasterFood</div>
+            <small>Kitchen dashboard</small>
+          </div>
+        </div>
+
+        <nav class="nav-list">
+          <button class="nav-btn active" data-panel="dashboard">Dashboard</button>
+          <button class="nav-btn" data-panel="pos">POS</button>
+          <button class="nav-btn" data-panel="menu">Front Store</button>
+          <button class="nav-btn" data-panel="inventory">Inventory &amp; Store</button>
+          <button class="nav-btn" data-panel="leftover">Leftover</button>
+          <button class="nav-btn" data-panel="promos">Promos &amp; Discount</button>
+          <button class="nav-btn" data-panel="orders">Orders</button>
+          <button class="nav-btn" data-panel="reports">Reports</button>
+          <button class="nav-btn" data-panel="audit">Audit trail</button>
+          <button class="nav-btn" data-panel="settings">Settings</button>
+          <button class="nav-btn shift-nav-btn" id="shift-nav-btn" onclick="openShiftManager()">Shifts</button>
+        </nav>
+
+        <div class="user-box">
+          <div class="user-avatar" id="user-avatar">A</div>
+          <div>
+            <div id="user-name">Admin</div>
+            <small id="user-role">Owner</small>
+          </div>
+        </div>
+
+        <button class="logout-btn" onclick="logout()">Logout</button>
+      </aside>
+
+      <main class="main-panel">
+        <section id="dashboard-panel" class="panel active">
+          <div class="panel-head">
+            <div>
+              <span class="eyebrow">Overview</span>
+              <h2>My Restaurant performance</h2>
+              <p class="panel-head-sub">Live snapshot of your store's activity</p>
+            </div>
+            <div class="panel-head-date">
+              <span class="phd-day" id="dashboard-day">—</span>
+              <span class="phd-date" id="dashboard-date">—</span>
+            </div>
+          </div>
+          <div id="dashboard-stats" class="stats-grid"></div>
+          <div class="charts-grid">
+            <div class="card-panel">
+              <div class="chart-head">
+                <h3>Revenue trend — last 7 days</h3>
+                <span class="chart-sub" id="bar-chart-summary"></span>
+              </div>
+              <div id="target-progress"></div>
+              <div id="revenue-line-chart" class="line-chart"></div>
+            </div>
+            <div class="card-panel">
+              <div class="chart-head">
+                <h3>Sales by category</h3>
+                <span class="chart-sub">Share of total revenue</span>
+              </div>
+              <div id="category-pie-chart" class="pie-chart"></div>
+            </div>
+          </div>
+          <div class="split-grid">
+            <div class="card-panel">
+              <h3>Low stock items</h3>
+              <div id="low-stock-list" class="mini-list"></div>
+            </div>
+            <div class="card-panel">
+              <h3>Recent orders</h3>
+              <div id="recent-orders-list" class="mini-list"></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="pos-panel" class="panel">
+          <div class="pos-topbar">
+            <div class="pos-inputs">
+              <div class="search-wrap">
+                <span class="input-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+                </span>
+                <input id="menu-search" type="text" placeholder="Search menu items" />
+              </div>
+              <div class="barcode-wrap">
+                <span class="input-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7v10"/><path d="M8 7v10"/><path d="M12 7v10"/><path d="M16 7v6"/><path d="M16 16v1"/><path d="M20 7v10"/></svg>
+                </span>
+                <input id="barcode-input" type="text" placeholder="Scan barcode..." autocomplete="off" spellcheck="false" />
+                <button class="scan-btn" onclick="openCameraScan()" title="Scan with camera">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2"/><path d="M16 4h2a2 2 0 0 1 2 2v2"/><path d="M20 16v2a2 2 0 0 1-2 2h-2"/><path d="M6 20H4a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+              </div>
+            </div>
+            <div class="topbar-actions">
+              <button class="action-btn secondary drawer-btn" onclick="openCashDrawer()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="M8 14h3"/><path d="M7 4v6"/><path d="M17 4v6"/></svg>
+                <span>Open drawer</span>
+              </button>
+              <button class="action-btn danger clear-cart-btn" onclick="clearCart()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6.5h16"/><path d="M9 6.5V4.5h6v2"/><path d="M6 6.5l.8 13h10.4l.8-13"/><path d="M10 10.5v5.5M14 10.5v5.5"/></svg>
+                <span>Clear cart</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="pos-body">
+            <div class="menu-area">
+              <div id="category-tabs" class="category-tabs"></div>
+              <div id="menu-grid" class="menu-grid"></div>
+            </div>
+
+            <aside class="cart-panel">
+              <div class="cart-header">
+                <h3>Current order</h3>
+                <span id="cart-total-count">0 items</span>
+              </div>
+              <button class="recall-saved-btn" onclick="openSavedOrdersModal()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 8v4l3 2"/></svg>
+                <span>Recall saved order</span>
+              </button>
+              <button class="recall-saved-btn promo-cart-btn" onclick="openPromoPicker()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 15.1 8.2 22 9.2l-5 4.9 1.2 7L12 17.8 5.8 21l1.2-7-5-4.9 6.9-1z"/></svg>
+                <span>Promo &amp; discount</span>
+              </button>
+              <button class="recall-saved-btn quick-sale-btn" onclick="openQuickSaleModal()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+                <span>Quick sale</span>
+              </button>
+              <button class="recall-saved-btn customer-cart-btn" onclick="openCustomerModal()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.5 3-5.5 7-5.5s7 2 7 5.5"/></svg>
+                <span id="cart-customer-badge" class="customer-badge">No customer</span>
+              </button>
+              <div id="cart-items" class="cart-items"></div>
+
+              <div class="totals-box">
+                <div class="total-row">
+                  <span>Subtotal</span>
+                  <strong id="subtotal-value">₦0</strong>
+                </div>
+                <div class="total-row discount hidden" id="promo-row">
+                  <span>Promo (<span id="promo-row-name"></span>)</span>
+                  <strong id="promo-row-value">-₦0</strong>
+                </div>
+                <div class="total-row discount hidden" id="discount-row">
+                  <span>Discount (<span id="discount-row-name"></span>)</span>
+                  <strong id="discount-row-value">-₦0</strong>
+                </div>
+                <div class="total-row discount hidden" id="loyalty-row">
+                  <span>Loyalty (<span id="loyalty-row-name"></span>)</span>
+                  <strong id="loyalty-row-value">-₦0</strong>
+                </div>
+                <div class="total-row">
+                  <span>Tax</span>
+                  <strong id="tax-value">₦0</strong>
+                </div>
+                <div class="total-row grand">
+                  <span>Total</span>
+                  <strong id="grand-total-value">₦0</strong>
+                </div>
+              </div>
+
+              <div class="checkout-actions">
+                <button class="action-btn save-order-btn" onclick="saveOrder()">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>
+                  <span>Save order</span>
+                </button>
+                <button class="action-btn primary checkout-btn" onclick="openPaymentModal()">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+                  <span>Checkout</span>
+                </button>
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        <section id="menu-panel" class="panel">
+          <div class="panel-head">
+            <div>
+              <span class="eyebrow">Front Store</span>
+              <h2>Food catalog</h2>
+            </div>
+          </div>
+
+          <div class="card-panel">
+            <h3 id="menu-form-title">Add a menu item</h3>
+            <form id="menu-form" class="form-grid">
+              <div class="field-group">
+                <label>Name</label>
+                <input id="menu-name" type="text" required />
+              </div>
+              <div class="field-group">
+                <label>Category</label>
+                <input id="menu-category" type="text" required />
+              </div>
+              <div class="field-group">
+                <label>Price</label>
+                <input id="menu-price" type="number" min="0" step="0.01" required />
+              </div>
+              <div class="field-group">
+                <label>Barcode (optional)</label>
+                <input id="menu-barcode" type="text" placeholder="e.g. 8901116000011" />
+              </div>
+              <div class="field-group">
+                <label>Tile color</label>
+                <div class="color-pick-wrap">
+                  <input id="menu-color" type="color" value="#b91c1c" />
+                  <input id="menu-color-text" type="text" value="#b91c1c" maxlength="7" />
+                </div>
+                <div class="color-presets" id="menu-color-presets"></div>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="primary-btn" id="menu-submit-btn">Add item</button>
+                <button type="button" class="action-btn secondary hidden" id="menu-cancel-btn" onclick="cancelMenuEdit()">Cancel edit</button>
+              </div>
+            </form>
+          </div>
+
+          <div class="card-panel">
+            <div class="menu-list-head">
+              <h3>Front store</h3>
+              <span class="group-count" id="menu-count">0 items</span>
+            </div>
+            <div id="menu-list" class="table-wrap"></div>
+          </div>
+        </section>
+
+        <section id="inventory-panel" class="panel">
+          <div class="panel-head">
+            <div>
+              <span class="eyebrow">Store</span>
+              <h2>Inventory management</h2>
+            </div>
+          </div>
+
+          <div id="inventory-summary" class="inventory-summary"></div>
+
+          <div class="card-panel" id="voided-returns-card">
+            <div class="card-title-row">
+              <div>
+                <h3>Voided returns</h3>
+                <p>Products voided from sales are held here as pending returns. Tap <strong>Return to stock</strong> to add them back to the store immediately.</p>
+              </div>
+            </div>
+            <div id="voided-returns-list" class="mini-list"></div>
+          </div>
+
+          <div class="card-panel import-export-card">
+            <div class="card-title-row">
+              <div>
+                <h3>Import &amp; export products</h3>
+                <p>Export your products to CSV, edit them in Excel, then import the file back to add or update items.</p>
+              </div>
+            </div>
+            <div class="io-actions">
+              <div class="io-btn export" onclick="exportInventoryCSV()">
+                <div class="io-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+                </div>
+                <div class="io-text">
+                  <strong>Export CSV</strong>
+                  <small>Download your current products</small>
+                </div>
+                <span class="io-arrow">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
+                </span>
+              </div>
+              <div class="io-btn import" onclick="document.getElementById('inventory-import-input').click()">
+                <div class="io-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="m7 8 5-5 5 5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+                </div>
+                <div class="io-text">
+                  <strong>Import CSV</strong>
+                  <small>Add or update products</small>
+                </div>
+                <span class="io-arrow">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
+                </span>
+              </div>
+              <input type="file" id="inventory-import-input" accept=".csv" class="hidden" onchange="handleInventoryImport(event)" />
+            </div>
+          </div>
+
+          <div class="card-panel">
+            <div class="card-title-row">
+              <span class="card-icon red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M5 7l1 12h12l1-12"/><path d="M9 7V5h6v2"/><path d="M9 11v6M15 11v6"/></svg></span>
+              <div>
+                <h3>Add stock item</h3>
+                <p>Add a new product to your store inventory.</p>
+              </div>
+            </div>
+            <form id="inventory-form" class="form-grid inv-form">
+              <div class="field-group">
+                <label>Item / Product</label>
+                <div class="input-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5h12l1.5 17h-15z"/><path d="M9 8.5h6"/><path d="M9 12.5h6"/></svg>
+                  <input id="stock-name" type="text" placeholder="e.g. Whole Chicken" required />
+                </div>
+              </div>
+              <div class="field-group">
+                <label>Group / Category</label>
+                <div class="input-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h7v7H4z"/><path d="M13 4h7v4h-7z"/><path d="M13 11h7v9h-7z"/><path d="M4 14h7v6H4z"/></svg>
+                  <input id="stock-group" type="text" placeholder="e.g. Beef, Bakery, Drinks" />
+                </div>
+              </div>
+              <div class="field-group">
+                <label>Unit</label>
+                <div class="input-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v6"/><path d="M6 9h12l-1.5 12h-9z"/><path d="M9 13h6"/></svg>
+                  <input id="stock-unit" type="text" value="pcs" required />
+                </div>
+              </div>
+              <div class="field-group">
+                <label>Stock</label>
+                <div class="input-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="16" height="13" rx="2"/><path d="M8 7V5a4 4 0 0 1 8 0v2"/><path d="M12 11v4"/><path d="M10 13h4"/></svg>
+                  <input id="stock-qty" type="number" min="0" step="1" placeholder="0" required />
+                </div>
+              </div>
+              <div class="field-group">
+                <label>Price</label>
+                <div class="input-icon">
+                  <span>₦</span>
+                  <input id="stock-price" type="number" min="0" step="0.01" placeholder="0.00" />
+                </div>
+              </div>
+              <div class="field-group">
+                <label>Reorder level</label>
+                <div class="input-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+                  <input id="stock-reorder" type="number" min="0" step="1" value="10" />
+                </div>
+              </div>
+              <div class="field-group">
+                <label>Expiry date (optional)</label>
+                <div class="input-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M8 3v4M16 3v4M4 11h16"/></svg>
+                  <input id="stock-expiry" type="date" />
+                </div>
+              </div>
+              <button type="submit" class="primary-btn add-stock-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+                <span>Add stock</span>
+              </button>
+            </form>
+            <p class="form-hint">Set a <strong>price</strong>, then use <strong>Push to menu</strong> to sell this product on the front office POS.</p>
+          </div>
+
+          <div class="card-panel">
+            <div class="card-title-row">
+              <span class="card-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14l-1.5 12h-11z"/><path d="M9 6.5A2.5 2.5 0 0 1 11.5 4c1 0 2 .8 2 2"/><path d="M9 12.5h6"/></svg></span>
+              <div>
+                <h3>Supplier purchases</h3>
+                <p>Record stock bought from a supplier. Stock is added to inventory automatically.</p>
+              </div>
+            </div>
+            <div class="card-actions">
+              <button class="action-btn primary" onclick="openPurchaseModal()">Record purchase</button>
+            </div>
+            <div id="purchases-list" class="mini-list"></div>
+          </div>
+
+          <div class="card-panel">
+            <h3>Inventory</h3>
+            <div id="inventory-list" class="table-wrap"></div>
+            <div id="inventory-pagination" class="pagination"></div>
+          </div>
+        </section>
+
+        <section id="leftover-panel" class="panel">
+          <div class="panel-head">
+            <div>
+              <span class="eyebrow">Leftover</span>
+              <h2>Returned products</h2>
+              <p class="panel-sub">Review returned products. Mark each as returned to inventory (resaleable) or wastage (cannot be sold again).</p>
+            </div>
+          </div>
+          <div class="card-panel">
+            <div class="menu-list-head">
+              <h3>Leftover records</h3>
+              <span class="group-count" id="leftover-count">0 records</span>
+            </div>
+            <div id="leftover-list" class="table-wrap"></div>
+            <div id="leftover-pagination" class="pagination"></div>
+          </div>
+        </section>
+
+        <section id="promos-panel" class="panel">
+          <div class="panel-head">
+            <div>
+              <span class="eyebrow">Marketing</span>
+              <h2>Promos &amp; discounts</h2>
+              <p class="panel-sub">Create promos and discounts here. They appear on the POS so you can apply them to a customer's order at checkout.</p>
+            </div>
+          </div>
+
+          <div class="split-grid promos-grid">
+            <div class="card-panel">
+              <div class="card-title-row">
+                <span class="card-icon orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6v5.2L19.4 13a2 2 0 0 1 0 2.8l-3.6 3.6a2 2 0 0 1-2.8 0L8.6 15H5.5A1.5 1.5 0 0 1 4 13.5V10"/><path d="M7 4v1"/><path d="M4 8h2"/></svg></span>
+                <div>
+                  <h3>Create a promo</h3>
+                  <p>Active promos appear on the POS promo list.</p>
+                </div>
+              </div>
+              <form id="promo-form" class="form-grid inv-form">
+                <div class="field-group">
+                  <label>Promo name</label>
+                  <input id="promo-name" type="text" placeholder="e.g. Buy 1 Get 1 Burger" required />
+                </div>
+                <div class="field-group">
+                  <label>Type of promo</label>
+                  <select id="promo-type">
+                    <option value="percentage">Percentage off (%)</option>
+                    <option value="fixed">Fixed amount off (₦)</option>
+                    <option value="bogo">Buy 1 Get 1 free</option>
+                    <option value="free">Free item with purchase</option>
+                  </select>
+                </div>
+                <div class="field-group">
+                  <label>Value</label>
+                  <div class="input-icon">
+                    <span>₦</span>
+                    <input id="promo-value" type="number" min="0" step="0.01" placeholder="e.g. 10" />
+                  </div>
+                </div>
+                <div class="field-group">
+                  <label>Note (optional)</label>
+                  <input id="promo-note" type="text" placeholder="e.g. Valid all weekend" />
+                </div>
+                <div class="form-actions">
+                  <button type="submit" class="primary-btn">Add promo</button>
+                </div>
+              </form>
+              <p class="form-hint">Value is a percentage or fixed amount. Buy 1 Get 1 and Free item discounts are calculated automatically from the cheapest item in the order.</p>
+
+              <div class="menu-list-head">
+                <h3>Promo list</h3>
+                <span class="group-count" id="promo-count">0 promos</span>
+              </div>
+              <div id="promo-list" class="mini-list"></div>
+            </div>
+
+            <div class="card-panel">
+              <div class="card-title-row">
+                <span class="card-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5h6l2.5 4H6.5z"/><path d="M6.5 9l1.5 11h8l1.5-11"/><path d="M10 12.5h4"/></svg></span>
+                <div>
+                  <h3>Create a discount</h3>
+                  <p>Active discounts appear on the POS discount list.</p>
+                </div>
+              </div>
+              <form id="discount-form" class="form-grid inv-form">
+                <div class="field-group">
+                  <label>Discount name</label>
+                  <input id="discount-name" type="text" placeholder="e.g. Staff 10% off" required />
+                </div>
+                <div class="field-group">
+                  <label>Type of discount</label>
+                  <select id="discount-type">
+                    <option value="percentage">Percentage off (%)</option>
+                    <option value="fixed">Fixed amount off (₦)</option>
+                  </select>
+                </div>
+                <div class="field-group">
+                  <label>Value</label>
+                  <div class="input-icon">
+                    <span>₦</span>
+                    <input id="discount-value" type="number" min="0" step="0.01" placeholder="e.g. 10" required />
+                  </div>
+                </div>
+                <div class="field-group">
+                  <label>Note (optional)</label>
+                  <input id="discount-note" type="text" placeholder="e.g. For walk-in customers" />
+                </div>
+                <div class="form-actions">
+                  <button type="submit" class="primary-btn">Add discount</button>
+                </div>
+              </form>
+              <p class="form-hint">A discount reduces the order total before tax is applied.</p>
+
+              <div class="menu-list-head">
+                <h3>Discount list</h3>
+                <span class="group-count" id="discount-count">0 discounts</span>
+              </div>
+              <div id="discount-list" class="mini-list"></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="orders-panel" class="panel">
+          <div class="panel-head">
+            <div>
+              <span class="eyebrow">Sales</span>
+              <h2>Order history</h2>
+            </div>
+            <span class="live-pill" id="orders-live-pill">● Live</span>
+          </div>
+          <div id="orders-stats" class="stats-grid"></div>
+          <div class="card-panel closing-card">
+            <div class="card-title-row">
+              <span class="card-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 8v4l3 2"/></svg></span>
+              <div>
+                <h3>Daily closing (X-Z)</h3>
+                <p>Reconcile the day's expected totals with the cash counted in the drawer.</p>
+              </div>
+            </div>
+            <div class="card-actions">
+              <button class="action-btn primary" onclick="openClosingModal()">Close day</button>
+            </div>
+            <div id="closings-list" class="mini-list"></div>
+          </div>
+          <div class="split-grid">
+            <div class="card-panel">
+              <h3>Top selling items</h3>
+              <div id="top-items-list" class="mini-list"></div>
+            </div>
+            <div class="card-panel">
+              <h3>Sales by category</h3>
+              <div id="orders-category-list" class="mini-list"></div>
+            </div>
+          </div>
+          <div class="card-panel table-card">
+            <h3>All orders</h3>
+            <div id="orders-list" class="table-wrap"></div>
+            <div id="orders-pagination" class="pagination"></div>
+          </div>
+        </section>
+
+        <section id="reports-panel" class="panel">
+          <div class="panel-head">
+            <div>
+              <span class="eyebrow">Reports</span>
+              <h2>Business reports</h2>
+              <p class="panel-sub">View and export sales, inventory, menu, orders and user data.</p>
+            </div>
+          </div>
+
+          <div class="report-toolbar card-panel">
+            <div class="report-filter">
+              <div class="field-group inline">
+                <label>From</label>
+                <input id="report-date-from" type="date" />
+              </div>
+              <div class="field-group inline">
+                <label>To</label>
+                <input id="report-date-to" type="date" />
+              </div>
+              <button class="action-btn secondary" onclick="applyReportFilter()">Filter</button>
+              <button class="action-btn secondary" onclick="resetReportFilter()">Reset</button>
+            </div>
+            <div class="period-switch" id="report-period-switch">
+              <button class="period-btn" data-period="today">Today</button>
+              <button class="period-btn" data-period="7d">7 days</button>
+              <button class="period-btn" data-period="30d">30 days</button>
+              <button class="period-btn active" data-period="all">All time</button>
+            </div>
+          </div>
+
+          <div class="report-tabs">
+            <button class="report-tab active" data-report="sales">Sales report</button>
+            <button class="report-tab" data-report="inventory">Inventory report</button>
+            <button class="report-tab" data-report="menu">Front store report</button>
+            <button class="report-tab" data-report="orders">Orders report</button>
+            <button class="report-tab" data-report="tax">VAT / TAX report</button>
+            <button class="report-tab" data-report="payments">Payments report</button>
+            <button class="report-tab" data-report="stock">Stock-in report</button>
+            <button class="report-tab" data-report="products">Product sold report</button>
+            <button class="report-tab" data-report="daily">Daily sales report</button>
+            <button class="report-tab" data-report="transactions">Transaction count report</button>
+            <button class="report-tab" data-report="peak">Peak hour report</button>
+            <button class="report-tab" data-report="customers">Customer report</button>
+            <button class="report-tab" data-report="refunds">Refund report</button>
+            <button class="report-tab" data-report="purchases">Purchases report</button>
+            <button class="report-tab" data-report="closings">Daily closing report</button>
+            <button class="report-tab" data-report="price">Price change report</button>
+            <button class="report-tab" data-report="shift">Shift report</button>
+            <button class="report-tab" data-report="void">Void report</button>
+            <button class="report-tab" data-report="leftover">Leftover report</button>
+            <button class="report-tab" data-report="promos">Promo &amp; discount report</button>
+          </div>
+
+          <div class="card-panel report-view">
+            <div class="report-head">
+              <div class="report-title-wrap">
+                <span class="report-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5h8l4 4V20.5H6z"/><path d="M14 3.5v4h4"/><path d="M9 12h6M9 15.5h6M9 8.5h1"/></svg></span>
+                <div>
+                  <h3 id="report-title">Sales report</h3>
+                  <p class="form-hint" id="report-subtitle"></p>
+                </div>
+              </div>
+              <div class="report-actions">
+                <button class="action-btn excel" onclick="downloadActiveReport()">Excel</button>
+                <button class="action-btn excel" onclick="downloadAccountingExport()">Accounting</button>
+                <button class="action-btn pdf" onclick="downloadActiveReportPDF()">PDF</button>
+                <button class="action-btn print" onclick="printActiveReport()">Print</button>
+              </div>
+            </div>
+            <div id="report-table" class="table-wrap"></div>
+            <div id="report-pagination" class="pagination"></div>
+          </div>
+        </section>
+
+        <section id="settings-panel" class="panel">
+          <div class="panel-head">
+            <div>
+              <span class="eyebrow">Setup</span>
+              <h2>Business settings</h2>
+              <p class="panel-sub">Manage your restaurant profile, tax, staff and payment options.</p>
+            </div>
+          </div>
+
+          <div class="settings-hero">
+            <div class="settings-hero-avatar" id="settings-hero-avatar">F</div>
+            <div class="settings-hero-info">
+              <div class="settings-hero-name" id="settings-hero-name">FasterFood</div>
+              <div class="settings-hero-contact" id="settings-hero-contact">Set your contact details</div>
+            </div>
+            <div class="settings-hero-badges">
+              <span class="hero-badge" id="settings-hero-currency">NGN</span>
+              <span class="hero-badge" id="settings-hero-tax">VAT 7.5%</span>
+            </div>
+          </div>
+
+          <div class="settings-layout">
+            <div class="card-panel">
+              <div class="card-title-row">
+                <span class="card-icon orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5V20h16V9.5"/><path d="M3.5 9.5 5 3.5h14l1.5 6"/><path d="M4 9.5c0 1.4 1.3 2.5 3 2.5s3-1.1 3-2.5M14 9.5c0 1.4 1.3 2.5 3 2.5s3-1.1 3-2.5"/><path d="M10 20v-5h4v5"/></svg></span>
+                <div>
+                  <h3>Business profile</h3>
+                  <p>Details shown on receipts and the POS.</p>
+                </div>
+              </div>
+
+              <div class="settings-grid">
+                <div class="field-group stacked">
+                  <label>Restaurant name</label>
+                  <div class="input-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h16"/><path d="M4 9c0-3.5 3.6-5.5 8-5.5S20 5.5 20 9"/><path d="M6 13h12"/><path d="M7.5 16.5h9"/><path d="M8.5 19.5h7"/></svg>
+                    <input id="shop-name" type="text" placeholder="e.g. FasterFood" />
+                  </div>
+                </div>
+                <div class="field-group stacked">
+                  <label>Currency</label>
+                  <div class="input-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M9 8h6"/><path d="M12 8v9"/><path d="M10.5 11.2h2.2"/><path d="M10.5 13.8h2.2"/></svg>
+                    <input id="currency" type="text" list="currency-list" value="NGN" placeholder="e.g. NGN" />
+                  </div>
+                  <datalist id="currency-list">
+                    <option value="NGN">Nigeria — Naira</option>
+                    <option value="USD">United States — Dollar</option>
+                    <option value="GBP">United Kingdom — Pound</option>
+                    <option value="EUR">Europe — Euro</option>
+                    <option value="GHS">Ghana — Cedi</option>
+                    <option value="KES">Kenya — Shilling</option>
+                    <option value="ZAR">South Africa — Rand</option>
+                    <option value="XOF">West Africa — CFA Franc</option>
+                  </datalist>
+                </div>
+                <div class="field-group stacked span-2">
+                  <label>Address</label>
+                  <div class="input-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6.5-5.5-6.5-10A6.5 6.5 0 1 1 18.5 11c0 4.5-6.5 10-6.5 10z"/><circle cx="12" cy="11" r="2.3"/></svg>
+                    <input id="shop-address" type="text" placeholder="Street, city" />
+                  </div>
+                </div>
+                <div class="field-group stacked">
+                  <label>Phone</label>
+                  <div class="input-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5h3.5l1.5 5-2.3 1.4a12.5 12.5 0 0 0 5.9 5.9L16 13.5l5 1.5V18a2 2 0 0 1-2 2A15.5 15.5 0 0 1 4 5a2 2 0 0 1 2-1.5z"/></svg>
+                    <input id="shop-phone" type="text" placeholder="+234 800 000 0000" />
+                  </div>
+                </div>
+                <div class="field-group stacked">
+                  <label>Email</label>
+                  <div class="input-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M4 8l8 5 8-5"/></svg>
+                    <input id="shop-email" type="email" placeholder="hello@business.com" />
+                  </div>
+                </div>
+                <div class="field-group stacked">
+                  <label>Website</label>
+                  <div class="input-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17"/><path d="M12 3.5c2.5 2.3 3.8 5.1 3.8 8.5S14.5 18.2 12 20.5C9.5 18.2 8.2 15.4 8.2 12S9.5 5.8 12 3.5z"/></svg>
+                    <input id="shop-website" type="text" placeholder="https://www.business.com" />
+                  </div>
+                </div>
+                <label class="toggle-row span-2">
+                  <input type="checkbox" id="receipt-contact-toggle" />
+                  <span class="toggle-box"></span>
+                  <span>Show email &amp; website on receipt</span>
+                </label>
+                <div class="field-group stacked">
+                  <label>Tax rate (%)</label>
+                  <div class="input-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5h12V20l-2-1.5L14 20l-2-1.5L10 20l-2-1.5L6 20z"/><path d="M9 9h6M9 12.5h6"/></svg>
+                    <input id="tax-rate" type="number" min="0" step="0.1" placeholder="e.g. 7.5" />
+                  </div>
+                </div>
+                <div class="field-group stacked">
+                  <label>Receipt size</label>
+                  <select id="receipt-width">
+                    <option value="80mm">80mm</option>
+                    <option value="58mm">58mm</option>
+                  </select>
+                </div>
+                <div class="field-group stacked">
+                  <label>Daily sales target (₦)</label>
+                  <div class="input-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M21 7v5h-5"/></svg>
+                    <input id="sales-target" type="number" min="0" step="100" placeholder="e.g. 50000" />
+                  </div>
+                </div>
+                <label class="toggle-row span-2">
+                  <input type="checkbox" id="loyalty-enabled-toggle" />
+                  <span class="toggle-box"></span>
+                  <span>Enable customer loyalty points</span>
+                </label>
+                <div class="field-group stacked">
+                  <label>Points per ₦100 spent</label>
+                  <input id="loyalty-points-per" type="number" min="0" step="0.5" placeholder="e.g. 1" />
+                </div>
+                <div class="field-group stacked">
+                  <label>₦ value per point</label>
+                  <input id="loyalty-point-value" type="number" min="0" step="0.5" placeholder="e.g. 1" />
+                </div>
+                <p class="field-hint span-2">VAT / sales tax is applied at checkout. Receipt size should match your thermal printer paper. Loyalty points are earned on paid sales and can be redeemed at checkout.</p>
+              </div>
+
+              <div class="card-actions">
+                <button class="action-btn primary" onclick="saveSettings()">Save settings</button>
+              </div>
+            </div>
+
+            <div class="card-panel">
+              <div class="card-title-row">
+                <span class="card-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="6" height="6" rx="1"/><rect x="14.5" y="3.5" width="6" height="6" rx="1"/><rect x="3.5" y="14.5" width="6" height="6" rx="1"/><path d="M14.5 14.5h3v3h-3z"/><path d="M18.5 14.5h2v6h-2zM14.5 18.5v2h4"/></svg></span>
+                <div>
+                  <h3>Receipt QR code</h3>
+                  <p>Upload a QR code image and it will appear at the bottom of printed receipts.</p>
+                </div>
+              </div>
+
+              <div class="qr-upload">
+                <div class="qr-preview" id="qr-preview">
+                  <span>No QR image</span>
+                </div>
+                <div class="qr-actions">
+                  <button class="action-btn secondary" onclick="document.getElementById('qr-upload-input').click()">Choose image</button>
+                  <button class="action-btn danger" onclick="clearQrImage()" id="qr-clear-btn" style="display:none">Remove</button>
+                </div>
+                <p class="field-hint">The QR image is stored locally and printed on every receipt.</p>
+              </div>
+              <input type="file" id="qr-upload-input" accept="image/*" class="hidden" onchange="handleQrUpload(event)" />
+            </div>
+
+            <div class="card-panel">
+              <div class="card-title-row">
+                <span class="card-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3 10h18"/><path d="M7 15h4"/></svg></span>
+                <div>
+                  <h3>Payment methods</h3>
+                  <p>Shown at checkout so you can record how customers pay.</p>
+                </div>
+                <span class="count-badge" id="payment-methods-count">0</span>
+              </div>
+
+              <div id="payment-methods-list" class="mini-list"></div>
+
+              <div class="pay-method-add">
+                <div class="input-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M9.5 8.5h5"/><path d="M12 8.5v7"/><path d="M10.8 11.3h2"/><path d="M10.8 13.7h2"/></svg>
+                  <input id="new-payment-method" type="text" placeholder="e.g. Credit Card" onkeydown="if(event.key==='Enter'){addPaymentMethod();}" />
+                </div>
+                <button class="action-btn primary" onclick="addPaymentMethod()">Add method</button>
+              </div>
+            </div>
+
+            <div class="card-panel">
+              <div class="card-title-row">
+                <span class="card-icon purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/><circle cx="17" cy="9.5" r="2.5"/><path d="M16.5 14.5c2 .4 4 2.1 4 4.5"/></svg></span>
+                <div>
+                  <h3>Users &amp; roles</h3>
+                  <p>Staff who can sign in and their access level.</p>
+                </div>
+                <span class="count-badge" id="users-count">0</span>
+              </div>
+
+              <div id="users-list" class="mini-list"></div>
+
+              <div class="user-add-grid">
+                <div class="input-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.5 3-5.5 7-5.5s7 2 7 5.5"/></svg>
+                  <input id="new-user-name" type="text" placeholder="Full name" />
+                </div>
+                <div class="input-icon">
+                  <span>@</span>
+                  <input id="new-user-username" type="text" placeholder="Username" autocomplete="off" />
+                </div>
+                <div class="input-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9" rx="2.5"/><path d="M8.5 10.5V8a3.5 3.5 0 1 1 7 0v2.5"/><path d="M12 15v2"/></svg>
+                  <input id="new-user-password" type="text" placeholder="Password" autocomplete="off" />
+                </div>
+                <select id="new-user-role">
+                  <option value="cashier">Cashier</option>
+                  <option value="kitchen">Kitchen</option>
+                  <option value="manager">Manager</option>
+                  <option value="admin">Owner</option>
+                </select>
+                <button class="action-btn primary" onclick="addUser()">Add user</button>
+              </div>
+            </div>
+
+            <div class="card-panel">
+              <div class="card-title-row">
+                <span class="card-icon red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9" rx="2.5"/><path d="M8.5 10.5V8a3.5 3.5 0 1 1 7 0v2.5"/><path d="M12 15v2"/><path d="M4.5 4.5l15 15"/></svg></span>
+                <div>
+                  <h3>Change password</h3>
+                  <p>Update your account password to a strong one.</p>
+                </div>
+              </div>
+
+              <div class="password-update-form">
+                <div class="field-group stacked">
+                  <label>Current password</label>
+                  <div class="input-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9" rx="2.5"/><path d="M8.5 10.5V8a3.5 3.5 0 1 1 7 0v2.5"/></svg>
+                    <input id="update-password-current" type="password" placeholder="Enter current password" autocomplete="current-password" />
+                  </div>
+                </div>
+                <div class="field-group stacked">
+                  <label>New password</label>
+                  <div class="input-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9" rx="2.5"/><path d="M8.5 10.5V8a3.5 3.5 0 1 1 7 0v2.5"/></svg>
+                    <input id="update-password-new" type="password" placeholder="At least 8 characters" autocomplete="new-password" onkeydown="if(event.key==='Enter'){updatePassword();}" />
+                  </div>
+                </div>
+                <div class="field-group stacked">
+                  <label>Confirm new password</label>
+                  <div class="input-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9" rx="2.5"/><path d="M8.5 10.5V8a3.5 3.5 0 1 1 7 0v2.5"/></svg>
+                    <input id="update-password-confirm" type="password" placeholder="Repeat new password" autocomplete="new-password" onkeydown="if(event.key==='Enter'){updatePassword();}" />
+                  </div>
+                </div>
+                <div class="password-strength" id="password-strength">
+                  <span class="ps-bar"></span>
+                  <span class="ps-bar"></span>
+                  <span class="ps-bar"></span>
+                  <span class="ps-label">Too weak</span>
+                </div>
+              </div>
+
+              <div class="card-actions">
+                <button class="action-btn primary" onclick="updatePassword()">Update password</button>
+              </div>
+            </div>
+
+            <div class="card-panel">
+              <div class="card-title-row">
+                <span class="card-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg></span>
+                <div>
+                  <h3>Backup &amp; restore</h3>
+                  <p>Download a full backup of all your data, or restore from a previous backup file.</p>
+                </div>
+              </div>
+              <div class="io-actions">
+                <div class="io-btn export" onclick="backupData()">
+                  <div class="io-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+                  </div>
+                  <div class="io-text">
+                    <strong>Download backup</strong>
+                    <small>Full JSON snapshot of your store</small>
+                  </div>
+                </div>
+                <div class="io-btn import" onclick="document.getElementById('backup-restore-input').click()">
+                  <div class="io-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="m7 8 5-5 5 5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+                  </div>
+                  <div class="io-text">
+                    <strong>Restore backup</strong>
+                    <small>Load data from a backup file</small>
+                  </div>
+                </div>
+                <input type="file" id="backup-restore-input" accept=".json,application/json" class="hidden" onchange="restoreData(event)" />
+              </div>
+              <p class="form-hint">Data is stored locally in this browser. A recovery snapshot is also kept automatically after each sale and on close, in case your data is accidentally cleared.</p>
+            </div>
+
+            <div class="card-panel reset-card">
+              <div class="card-title-row">
+                <span class="card-icon red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 6.5h15"/><path d="M9 6.5V4h6v2.5"/><path d="M6.5 6.5 7 20h10l.5-13.5"/><path d="M10 10.5v6M14 10.5v6"/></svg></span>
+                <div>
+                  <h3>Reset data</h3>
+                  <p>Clear or restore data back to its original defaults.</p>
+                </div>
+              </div>
+
+              <div class="reset-options">
+                <label class="reset-check"><input type="checkbox" value="menu" /> <span>Front store</span></label>
+                <label class="reset-check"><input type="checkbox" value="inventory" /> <span>Inventory</span></label>
+                <label class="reset-check"><input type="checkbox" value="stockLog" /> <span>Stock-in log</span></label>
+                <label class="reset-check"><input type="checkbox" value="sales" /> <span>Sales history</span></label>
+                <label class="reset-check"><input type="checkbox" value="shifts" /> <span>Shift records</span></label>
+                <label class="reset-check"><input type="checkbox" value="voids" /> <span>Void / returns</span></label>
+                <label class="reset-check"><input type="checkbox" value="leftovers" /> <span>Leftover records</span></label>
+                <label class="reset-check"><input type="checkbox" value="promos" /> <span>Promos &amp; discounts</span></label>
+                <label class="reset-check"><input type="checkbox" value="audit" /> <span>Audit trail</span></label>
+                <label class="reset-check"><input type="checkbox" value="payments" /> <span>Payment methods</span></label>
+                <label class="reset-check"><input type="checkbox" value="users" /> <span>Users</span></label>
+                <label class="reset-check"><input type="checkbox" value="settings" /> <span>Settings &amp; tax</span></label>
+                <label class="reset-check"><input type="checkbox" value="customers" /> <span>Customers &amp; loyalty</span></label>
+                <label class="reset-check"><input type="checkbox" value="purchases" /> <span>Supplier purchases</span></label>
+                <label class="reset-check"><input type="checkbox" value="closings" /> <span>Daily closings</span></label>
+                <label class="reset-check"><input type="checkbox" value="refunds" /> <span>Refunds</span></label>
+                <label class="reset-check"><input type="checkbox" value="priceHistory" /> <span>Price history</span></label>
+              </div>
+
+              <div class="reset-tools">
+                <button class="action-btn secondary" onclick="toggleAllResetChecks()">Select all</button>
+              </div>
+
+              <div class="card-actions reset-actions">
+                <button class="action-btn secondary" onclick="resetSelected()">Reset selected</button>
+                <button class="action-btn danger" onclick="factoryReset()">Factory reset</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="audit-panel" class="panel">
+          <div class="panel-head">
+            <div>
+              <span class="eyebrow">Security</span>
+              <h2>Audit trail</h2>
+            </div>
+          </div>
+
+          <div class="card-panel table-card">
+            <div class="audit-toolbar">
+              <select id="audit-user-filter" onchange="auditPage=1;renderAuditManager()"></select>
+              <select id="audit-action-filter" onchange="auditPage=1;renderAuditManager()"></select>
+              <button class="action-btn danger" onclick="clearAudit()">Clear logs</button>
+            </div>
+            <div id="audit-list" class="table-wrap"></div>
+            <div id="audit-pagination" class="pagination"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div id="inventory-edit-modal" class="modal hidden">
+      <div class="modal-card">
+        <div class="modal-head">
+          <h3>Edit stock item</h3>
+          <button class="close-btn" onclick="closeInventoryEdit()">×</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="field-group stacked">
+            <label>Name</label>
+            <input id="inv-edit-name" type="text" required />
+          </div>
+          <div class="field-group stacked">
+            <label>Group / Category</label>
+            <input id="inv-edit-group" type="text" />
+          </div>
+          <div class="field-group stacked">
+            <label>Unit</label>
+            <input id="inv-edit-unit" type="text" />
+          </div>
+          <div class="field-group stacked">
+            <label>Price</label>
+            <input id="inv-edit-price" type="number" min="0" step="0.01" placeholder="0.00" />
+          </div>
+          <div class="edit-grid">
+            <div class="field-group stacked">
+              <label>Stock</label>
+              <input id="inv-edit-stock" type="number" min="0" step="1" />
+            </div>
+            <div class="field-group stacked">
+              <label>Reorder level</label>
+              <input id="inv-edit-reorder" type="number" min="0" step="1" />
+            </div>
+          </div>
+          <div class="field-group stacked">
+            <label>Expiry date (optional)</label>
+            <input id="inv-edit-expiry" type="date" />
+          </div>
+          <p class="form-hint">Changes also update the item on the front office menu if it has been pushed.</p>
+        </div>
+
+        <div class="modal-actions">
+          <button class="action-btn secondary" onclick="closeInventoryEdit()">Cancel</button>
+          <button class="action-btn primary" onclick="saveInventoryEdit()">Save changes</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="scan-modal" class="modal hidden">
+      <div class="modal-card scan-card">
+        <div class="modal-head">
+          <h3>Scan barcode with camera</h3>
+          <button class="close-btn" onclick="closeCameraScan()">×</button>
+        </div>
+
+        <div class="modal-body">
+          <video id="scan-video" class="scan-video" autoplay playsinline muted></video>
+          <div id="scan-status" class="scan-status">Starting camera...</div>
+        </div>
+
+        <div class="modal-actions">
+          <button class="action-btn secondary" onclick="closeCameraScan()">Cancel</button>
+          <button class="action-btn primary" onclick="switchScanCamera()">Switch camera</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="sale-void-modal" class="modal hidden">
+      <div class="modal-card">
+        <div class="modal-head">
+          <h3>Void items</h3>
+          <button class="close-btn" onclick="closeVoidModal()">×</button>
+        </div>
+        <div class="modal-body">
+          <p class="form-hint" id="void-modal-hint"></p>
+          <div id="sale-void-list" class="mini-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="void-auth-modal" class="modal hidden">
+      <div class="modal-card">
+        <div class="modal-head">
+          <h3>Authorize void</h3>
+          <button class="close-btn" onclick="closeVoidAuthModal()">×</button>
+        </div>
+        <div class="modal-body">
+          <p class="form-hint">Voiding a product removes it from the sale and returns it to the store as a pending return. Enter the admin password to authorize.</p>
+          <div class="void-auth-box">
+            <input id="void-auth-password" type="password" placeholder="Admin password" autocomplete="off" />
+            <div class="void-auth-error" id="void-auth-error"></div>
+          </div>
+          <div class="modal-actions">
+            <button class="action-btn secondary" onclick="closeVoidAuthModal()">Cancel</button>
+            <button class="action-btn danger" onclick="confirmVoidAuth()">Authorize void</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="delete-auth-modal" class="modal hidden">
+      <div class="modal-card">
+        <div class="modal-head">
+          <h3>Authorize deletion</h3>
+          <button class="close-btn" onclick="closeDeleteAuthModal()">×</button>
+        </div>
+        <div class="modal-body">
+          <p class="form-hint" id="delete-auth-hint"></p>
+          <div class="void-auth-box">
+            <input id="delete-auth-password" type="password" placeholder="Admin password" autocomplete="off" />
+            <div class="void-auth-error" id="delete-auth-error"></div>
+          </div>
+          <div class="modal-actions">
+            <button class="action-btn secondary" onclick="closeDeleteAuthModal()">Cancel</button>
+            <button class="action-btn danger" onclick="confirmDeleteAuth()">Authorize delete</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="settings-auth-modal" class="modal hidden">
+      <div class="modal-card">
+        <div class="modal-head">
+          <h3>Authorize settings</h3>
+          <button class="close-btn" onclick="closeSettingsAuth()">×</button>
+        </div>
+        <div class="modal-body">
+          <p class="form-hint">Settings contain sensitive business data. Enter your password to continue.</p>
+          <div class="void-auth-box">
+            <input id="settings-auth-password" type="password" placeholder="Your password" autocomplete="off" onkeydown="if(event.key==='Enter'){confirmSettingsAuth();}" />
+            <div class="void-auth-error" id="settings-auth-error"></div>
+          </div>
+          <div class="modal-actions">
+            <button class="action-btn secondary" onclick="closeSettingsAuth()">Cancel</button>
+            <button class="action-btn primary" onclick="confirmSettingsAuth()">Unlock settings</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="saved-orders-modal" class="modal hidden">
+      <div class="modal-card">
+        <div class="modal-head">
+          <h3>Saved orders</h3>
+          <button class="close-btn" onclick="closeSavedOrdersModal()">×</button>
+        </div>
+
+        <div class="modal-body">
+          <p class="form-hint">Orders saved without payment. Tap one to load it into the cart and collect payment.</p>
+          <div id="saved-orders-list" class="mini-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="promo-picker-modal" class="modal hidden">
+      <div class="modal-card">
+        <div class="modal-head">
+          <h3>Apply promo &amp; discount</h3>
+          <button class="close-btn" onclick="closePromoPicker()">×</button>
+        </div>
+
+        <div class="modal-body">
+          <p class="form-hint">Pick an active promo or discount to apply to this order. Only one of each can be applied at a time.</p>
+          <div id="promo-picker-current"></div>
+
+          <h4 class="promo-section-title">Promos</h4>
+          <div id="promo-picker-promos" class="mini-list"></div>
+
+          <h4 class="promo-section-title">Discounts</h4>
+          <div id="promo-picker-discounts" class="mini-list"></div>
+        </div>
+
+        <div class="modal-actions">
+          <button class="action-btn secondary" onclick="clearAppliedPromo()">Remove promo</button>
+          <button class="action-btn secondary" onclick="clearAppliedDiscount()">Remove discount</button>
+          <button class="action-btn primary" onclick="closePromoPicker()">Done</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="payment-modal" class="modal hidden">
+      <div class="modal-card">
+        <div class="modal-head">
+          <h3>Complete payment</h3>
+          <button class="close-btn" onclick="closePaymentModal()">×</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="pay-summary">
+            <span>Amount due</span>
+            <strong id="payment-amount">₦0</strong>
+          </div>
+
+          <label class="pay-method-label">Payment method</label>
+          <p class="pay-hint">Tap a method to use the remaining amount, or type an amount.</p>
+          <div id="payment-methods" class="pay-methods"></div>
+
+          <div class="pay-breakdown">
+            <div>
+              <small>Allocated</small>
+              <strong id="allocated-display">₦0</strong>
+            </div>
+            <div>
+              <small>Remaining</small>
+              <strong id="remaining-display">₦0</strong>
+            </div>
+            <div>
+              <small>Change</small>
+              <strong id="change-display">₦0</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button class="action-btn secondary" onclick="closePaymentModal()">Cancel</button>
+          <button class="action-btn primary confirm-pay-btn" onclick="completeCheckout()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+            <span>Confirm payment</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="reset-confirm-modal" class="modal hidden">
+      <div class="modal-card">
+        <div class="modal-head">
+          <h3>Confirm reset</h3>
+          <button class="close-btn" onclick="closeResetConfirm()">×</button>
+        </div>
+
+        <div class="modal-body">
+          <p id="reset-confirm-message" class="reset-confirm-message"></p>
+
+          <div class="reset-pass-field">
+            <div class="input-icon">
+              <span>🔒</span>
+              <input id="reset-password" type="password" placeholder="Enter admin password" autocomplete="off" onkeydown="if(event.key==='Enter'){executeReset();}" />
+            </div>
+          </div>
+
+          <p class="reset-confirm-note">This action cannot be undone.</p>
+        </div>
+
+        <div class="modal-actions">
+          <button class="action-btn secondary" onclick="closeResetConfirm()">Cancel</button>
+          <button class="action-btn danger" onclick="executeReset()">Yes, reset</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="shift-modal" class="modal hidden">
+      <div class="modal-card">
+        <div class="modal-head">
+          <h3>Shifts</h3>
+          <button class="close-btn" onclick="closeShiftModal()">×</button>
+        </div>
+
+        <div class="modal-body">
+          <p class="form-hint">Open today's shifts so cashiers can start selling. End a shift when the period is done — the cashier will be signed out automatically.</p>
+
+          <div class="shift-config">
+            <div class="shift-config-row">
+              <span class="shift-config-name">Morning</span>
+              <div class="shift-time-pair">
+                <label>Starts</label>
+                <input id="shift-morning-start" type="time" value="08:00" />
+              </div>
+              <div class="shift-time-pair">
+                <label>Ends</label>
+                <input id="shift-morning-end" type="time" value="14:00" />
+              </div>
+            </div>
+            <div class="shift-config-row">
+              <span class="shift-config-name">Afternoon</span>
+              <div class="shift-time-pair">
+                <label>Starts</label>
+                <input id="shift-afternoon-start" type="time" value="14:00" />
+              </div>
+              <div class="shift-time-pair">
+                <label>Ends</label>
+                <input id="shift-afternoon-end" type="time" value="22:00" />
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-actions">
+            <button class="action-btn primary" onclick="saveTodayShifts()">Open today's shifts</button>
+          </div>
+
+          <div class="shift-list-head">Today's shifts</div>
+          <div id="today-shift-list" class="mini-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="leftover-popover" class="leftover-pop hidden">
+      <div class="leftover-pop-title" id="leftover-popover-title">Return product</div>
+      <div class="leftover-pop-row">
+        <input id="leftover-popover-qty" type="number" min="1" step="1" value="1" />
+        <span class="leftover-pop-unit">unit(s)</span>
+      </div>
+      <div class="leftover-pop-actions">
+        <button class="action-btn secondary" onclick="closeLeftoverPopover()">Cancel</button>
+        <button class="action-btn success" onclick="confirmLeftoverReturn()">Return</button>
+      </div>
+    </div>
+
+    <div id="toast" class="toast">
+      <span class="toast-icon"></span>
+      <span class="toast-msg"></span>
+    </div>
+
+    <div id="quick-sale-modal" class="modal hidden">
+      <div class="modal-card">
+        <div class="modal-head">
+          <h3>Quick sale</h3>
+          <button class="close-btn" onclick="closeQuickSaleModal()">×</button>
+        </div>
+        <div class="modal-body">
+          <p class="form-hint">Sell an item that is not on the menu. It will not deduct from inventory.</p>
+          <div class="field-group stacked">
+            <label>Item name</label>
+            <input id="quick-sale-name" type="text" placeholder="e.g. Bottled Water" />
+          </div>
+          <div class="edit-grid">
+            <div class="field-group stacked">
+              <label>Price (₦)</label>
+              <input id="quick-sale-price" type="number" min="0" step="0.01" placeholder="0.00" />
+            </div>
+            <div class="field-group stacked">
+              <label>Qty</label>
+              <input id="quick-sale-qty" type="number" min="1" step="1" value="1" />
+            </div>
+          </div>
+          <div class="void-auth-error" id="quick-sale-error"></div>
+        </div>
+        <div class="modal-actions">
+          <button class="action-btn secondary" onclick="closeQuickSaleModal()">Cancel</button>
+          <button class="action-btn primary" onclick="addQuickSaleItem()">Add to cart</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="customer-modal" class="modal hidden">
+      <div class="modal-card customer-card">
+        <div class="modal-head">
+          <h3>Customer &amp; loyalty</h3>
+          <button class="close-btn" onclick="closeCustomerModal()">×</button>
+        </div>
+        <div class="modal-body">
+          <p class="form-hint">Select a customer to attach this order and earn loyalty points on payment.</p>
+          <div class="search-wrap customer-search">
+            <span class="input-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+            </span>
+            <input id="customer-search" type="text" placeholder="Search by name or phone" oninput="renderCustomerList(this.value)" />
+          </div>
+          <div id="customer-list" class="mini-list customer-list"></div>
+
+          <h4 class="promo-section-title">New customer</h4>
+          <div class="edit-grid">
+            <div class="field-group stacked">
+              <label>Name</label>
+              <input id="new-customer-name" type="text" placeholder="Customer name" />
+            </div>
+            <div class="field-group stacked">
+              <label>Phone</label>
+              <input id="new-customer-phone" type="text" placeholder="Phone number" />
+            </div>
+          </div>
+          <div class="void-auth-error" id="customer-error"></div>
+          <div id="customer-selected-info" class="customer-selected-info"></div>
+          <div id="loyalty-redeem-row" class="loyalty-redeem hidden">
+            <label>Redeem loyalty points</label>
+            <div class="loyalty-redeem-line">
+              <input id="loyalty-redeem-input" type="number" min="0" step="1" placeholder="0" oninput="setLoyaltyRedeem()" />
+              <span class="form-hint">Each point is worth money off this order.</span>
+            </div>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="action-btn primary" onclick="createCustomer()">Save customer</button>
+          <button class="action-btn secondary" onclick="closeCustomerModal()">Done</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="refund-modal" class="modal hidden">
+      <div class="modal-card">
+        <div class="modal-head">
+          <h3>Refund order</h3>
+          <button class="close-btn" onclick="closeRefundModal()">×</button>
+        </div>
+        <div class="modal-body">
+          <p class="form-hint" id="refund-hint"></p>
+          <p class="form-hint">Products are returned to inventory and the sale is marked as refunded.</p>
+          <div class="void-auth-box">
+            <input id="refund-password" type="password" placeholder="Admin password" autocomplete="off" onkeydown="if(event.key==='Enter'){confirmRefund();}" />
+            <div class="void-auth-error" id="refund-error"></div>
+          </div>
+          <div class="modal-actions">
+            <button class="action-btn secondary" onclick="closeRefundModal()">Cancel</button>
+            <button class="action-btn danger" onclick="confirmRefund()">Confirm refund</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="closing-modal" class="modal hidden">
+      <div class="modal-card">
+        <div class="modal-head">
+          <h3>Daily closing</h3>
+          <button class="close-btn" onclick="closeClosingModal()">×</button>
+        </div>
+        <div class="modal-body">
+          <p class="form-hint"><span id="closing-date"></span> · <strong id="closing-sales-count"></strong> · Expected total <strong id="closing-total"></strong></p>
+          <div id="closing-methods" class="closing-methods"></div>
+          <div class="void-auth-error" id="closing-error"></div>
+        </div>
+        <div class="modal-actions">
+          <button class="action-btn secondary" onclick="closeClosingModal()">Cancel</button>
+          <button class="action-btn primary" onclick="saveClosing()">Close day</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="purchase-modal" class="modal hidden">
+      <div class="modal-card purchase-card">
+        <div class="modal-head">
+          <h3>Record purchase</h3>
+          <button class="close-btn" onclick="closePurchaseModal()">×</button>
+        </div>
+        <div class="modal-body">
+          <p class="form-hint">Enter the quantity bought for each product. Stock is added automatically.</p>
+          <div class="edit-grid">
+            <div class="field-group stacked">
+              <label>Supplier</label>
+              <input id="purchase-supplier" type="text" placeholder="e.g. Chico Farms" />
+            </div>
+            <div class="field-group stacked">
+              <label>Note (optional)</label>
+              <input id="purchase-note" type="text" placeholder="Delivery reference" />
+            </div>
+          </div>
+          <div class="purchase-table-wrap">
+            <table class="purchase-table">
+              <thead>
+                <tr><th>Product</th><th>Qty</th><th>Unit cost</th></tr>
+              </thead>
+              <tbody id="purchase-items"></tbody>
+            </table>
+          </div>
+          <div class="void-auth-error" id="purchase-error"></div>
+        </div>
+        <div class="modal-actions">
+          <button class="action-btn secondary" onclick="closePurchaseModal()">Cancel</button>
+          <button class="action-btn primary" onclick="savePurchase()">Save purchase</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="pos.js"></script>
+  </body>
+</html>
