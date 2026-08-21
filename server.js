@@ -86,6 +86,11 @@ const server = http.createServer((req, res) => {
   }
 
   const keyMatch = pathname.match(/^\/api\/data\/([^/]+)$/);
+  if (keyMatch && req.method === 'GET') {
+    sendJson(res, 200, { key: keyMatch[1], value: db[keyMatch[1]] ?? null });
+    return;
+  }
+
   if (keyMatch && req.method === 'PUT') {
     const key = keyMatch[1];
     readBody(req, (body) => {
@@ -99,6 +104,13 @@ const server = http.createServer((req, res) => {
         sendJson(res, 400, { error: 'Invalid JSON body' });
       }
     });
+    return;
+  }
+
+  if (pathname === '/menu') {
+    const filePath = path.join(ROOT, 'menu-online.html');
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' });
+    fs.createReadStream(filePath).pipe(res);
     return;
   }
 
@@ -134,7 +146,10 @@ const server = http.createServer((req, res) => {
 
   fs.stat(filePath, (err, stats) => {
     if (!err && stats.isFile()) {
-      res.writeHead(200, { 'Content-Type': MIME[path.extname(filePath).toLowerCase()] || 'application/octet-stream' });
+      res.writeHead(200, {
+        'Content-Type': MIME[path.extname(filePath).toLowerCase()] || 'application/octet-stream',
+        'Cache-Control': 'no-cache'
+      });
       fs.createReadStream(filePath).pipe(res);
     } else {
       res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
