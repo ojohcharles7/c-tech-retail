@@ -1,0 +1,78 @@
+﻿Name,Group,Unit,Stock,Reorder Level,Price
+Food  Pack small,TAKWAY,pcs,100,5,200
+Food  Pack big,TAKWAY,pcs,12,5,300
+Scone,PASTRY SECTION,pcs,12,5,1200
+Meat Pie,PASTRY SECTION,pcs,12,5,1200
+Chicken Pie,PASTRY SECTION,pcs,12,5,1200
+Jumbo,PASTRY SECTION,pcs,12,5,700
+Sausage Roll,PASTRY SECTION,pcs,12,5,2500
+Burger,PASTRY SECTION,pcs,12,5,500
+Rock Bun,PASTRY SECTION,pcs,12,5,1200
+Chin Chin,PASTRY SECTION,Pcs,12,5,1000
+Chips,CHICKEN SECTION,Pcs,12,5,4000
+Chocolate Chicken,CHICKEN SECTION,Pcs,12,5,4000
+Crunchy B,CHICKEN SECTION,Pcs,12,5,2000
+Crunchy S,CHICKEN SECTION,Pcs,12,5,2000
+Combo,CHICKEN SECTION,Pcs,12,5,3000
+Fish Delight,CHICKEN SECTION,Pcs,12,5,3000
+Grilled Fish,CHICKEN SECTION,Pcs,12,5,1200
+Sauce Beef,CHICKEN SECTION,Pcs,12,5,1000
+Sauce Kponmo,CHICKEN SECTION,Pcs,12,5,4000
+Barbecue Chicken,CHICKEN SECTION,Pcs,12,5,2000
+Full Fish Delight,CHICKEN SECTION,Pcs,12,5,8000
+Turkey (Big),CHICKEN SECTION,Pcs,12,5,5000
+Turkey (Small),CHICKEN SECTION,Pcs,12,5,1000
+Mentors Mint,RICE & SALAD,portion,12,5,1500
+Fried Rice,RICE & SALAD,portion,12,5,1500
+Jollof Rice,RICE & SALAD,portion,12,5,2500
+Meaty Rice,RICE & SALAD,portion,12,5,2500
+Local Rice,RICE & SALAD,portion,12,5,3000
+Asian Rice,RICE & SALAD,portion,12,5,2000
+Party Jollof,RICE & SALAD,portion,12,5,2000
+Rice & Beans,RICE & SALAD,portion,12,5,2000
+Spaghetti,RICE & SALAD,portion,12,5,2000
+Macaroni,RICE & SALAD,portion,12,5,1000
+Porridge Beans,RICE & SALAD,portion,12,5,800
+White Rice,RICE & SALAD,portion,12,5,1200
+Moi Moi,RICE & SALAD,portion,12,5,1000
+Vegetable Salad,RICE & SALAD,portion,12,5,1000
+White Yam,RICE & SALAD,portion,12,5,1000
+Egg Sauce,RICE & SALAD,portion,12,5,3000
+Plantain Pepper Soup,RICE & SALAD,portion,12,5,3500
+Chicken Curry Sauce,RICE & SALAD,portion,12,5,2500
+Shredded Beef,RICE & SALAD,portion,12,5,500
+Boiled Plantain,RICE & SALAD,portion,12,5,500
+Boiled Egg,RICE & SALAD,portion,12,5,1200
+Porridge Yam,RICE & SALAD,portion,12,5,2000
+Ofada Rice,RICE & SALAD,portion,12,5,
+Slice Bread,BREAD SECTION,pcs,12,5,1300
+Lolcat Bread,BREAD SECTION,pcs,12,5,1500
+Butter Bread,BREAD SECTION,pcs,12,5,1300
+Tulse Bread,BREAD SECTION,pcs,12,5,1300
+Queens Bread,BREAD SECTION,pcs,12,5,1300
+Fantasy Roll,BREAD SECTION,pcs,12,5,700
+Jam Doughnut,BREAD SECTION,pcs,12,5,900
+Vegetable Soup,AFRICAN SECTION,Spoon,12,5,3500
+Egusi Soup,AFRICAN SECTION,Spoon,12,5,3500
+Ogbono Soup,AFRICAN SECTION,Spoon,12,5,4000
+Uziza Soup,AFRICAN SECTION,Spoon,12,5,3500
+Oha Soup,AFRICAN SECTION,Spoon,12,5,3500
+Bitterleaf Soup,AFRICAN SECTION,Spoon,12,5,3500
+Nkwobi,AFRICAN SECTION,Spoon,12,5,5000
+Isi Ewu,AFRICAN SECTION,spoon,12,5,12000
+Goat Meat Pepper Soup,AFRICAN SECTION,spoon,12,5,3500
+Fish Pepper Soup,AFRICAN SECTION,Spoon,12,5,3500
+Stockfish,AFRICAN SECTION,spoon,12,5,500
+Chivita Big,DRINKS,Bottle,12,5,2000
+Exotic Big,DRINKS,Bottle,12,5,2000
+Eva Water,DRINKS,Bottle,12,5,150
+Fanta,DRINKS,Bottle,12,5,300
+Hollandia Big,DRINKS,Bottle,12,5,2000
+Hollandia Milk,DRINKS,Bottle,12,5,700
+Coke,DRINKS,Bottle,12,5,250
+Soft Drinks,DRINKS,Bottle,12,5,250
+Malt,DRINKS,Bottle,12,5,900
+Vitamilk,DRINKS,Bottle,12,5,2200
+ToCream,DRINKS,Bottle,12,5,3200
+Monster Energy Drink,DRINKS,Bottle,12,5,1500
+Chapman,DRINKS,Bottle,12,5,500

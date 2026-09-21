@@ -23,7 +23,8 @@ const STORAGE_KEYS = {
   refunds: 'ff_refunds',
   recovery: 'ff_recovery',
   purchaseOrders: 'ff_purchase_orders',
-  bookOrders: 'ff_book_orders'
+  bookOrders: 'ff_book_orders',
+  suppliers: 'ff_suppliers'
 };
 
 const defaultUsers = [
@@ -43,14 +44,14 @@ const defaultInventory = [
 ];
 
 const defaultMenu = [
-  { id: 1, name: 'Classic Burger', category: 'Burgers', price: 1800, barcode: '8901116000011', ingredients: [{ name: 'Beef Patty', qty: 1 }, { name: 'Burger Bun', qty: 1 }, { name: 'Lettuce', qty: 1 }, { name: 'Tomato', qty: 1 }, { name: 'Packaging Box', qty: 1 }] },
-  { id: 2, name: 'Cheese Burger', category: 'Burgers', price: 2200, barcode: '8901116000028', ingredients: [{ name: 'Beef Patty', qty: 1 }, { name: 'Burger Bun', qty: 1 }, { name: 'Cheese Slice', qty: 2 }, { name: 'Tomato', qty: 1 }, { name: 'Packaging Box', qty: 1 }] },
-  { id: 3, name: 'Crispy Chicken', category: 'Chicken', price: 2100, barcode: '8901116000035', ingredients: [{ name: 'Chicken Fillet', qty: 1 }, { name: 'Burger Bun', qty: 1 }, { name: 'Lettuce', qty: 1 }, { name: 'Packaging Box', qty: 1 }] },
-  { id: 4, name: 'Small Fries', category: 'Sides', price: 900, barcode: '8901116000042', ingredients: [{ name: 'French Fries', qty: 1 }] },
-  { id: 5, name: 'Large Fries', category: 'Sides', price: 1500, barcode: '8901116000059', ingredients: [{ name: 'French Fries', qty: 2 }] },
-  { id: 6, name: 'Soft Drink', category: 'Drinks', price: 500, barcode: '8901116000066', ingredients: [{ name: 'Soft Drink', qty: 1 }] },
-  { id: 7, name: 'Pepsi Combo', category: 'Combos', price: 3000, barcode: '8901116000073', ingredients: [{ name: 'Beef Patty', qty: 1 }, { name: 'Burger Bun', qty: 1 }, { name: 'French Fries', qty: 1 }, { name: 'Soft Drink', qty: 1 }, { name: 'Packaging Box', qty: 1 }] },
-  { id: 8, name: 'Family Meal', category: 'Combos', price: 5200, barcode: '8901116000080', ingredients: [{ name: 'Beef Patty', qty: 2 }, { name: 'Burger Bun', qty: 2 }, { name: 'Cheese Slice', qty: 2 }, { name: 'French Fries', qty: 2 }, { name: 'Soft Drink', qty: 2 }, { name: 'Packaging Box', qty: 2 }] }
+  { id: 1, name: 'Classic Burger', category: 'Burgers', price: 1800, barcode: '8901116000011', image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=900&q=80', ingredients: [{ name: 'Beef Patty', qty: 1 }, { name: 'Burger Bun', qty: 1 }, { name: 'Lettuce', qty: 1 }, { name: 'Tomato', qty: 1 }, { name: 'Packaging Box', qty: 1 }] },
+  { id: 2, name: 'Cheese Burger', category: 'Burgers', price: 2200, barcode: '8901116000028', image: 'https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=900&q=80', ingredients: [{ name: 'Beef Patty', qty: 1 }, { name: 'Burger Bun', qty: 1 }, { name: 'Cheese Slice', qty: 2 }, { name: 'Tomato', qty: 1 }, { name: 'Packaging Box', qty: 1 }] },
+  { id: 3, name: 'Crispy Chicken', category: 'Chicken', price: 2100, barcode: '8901116000035', image: 'https://images.unsplash.com/photo-1604909052743-94e838986d24?auto=format&fit=crop&w=900&q=80', ingredients: [{ name: 'Chicken Fillet', qty: 1 }, { name: 'Burger Bun', qty: 1 }, { name: 'Lettuce', qty: 1 }, { name: 'Packaging Box', qty: 1 }] },
+  { id: 4, name: 'Small Fries', category: 'Sides', price: 900, barcode: '8901116000042', image: 'https://images.unsplash.com/photo-1576107232684-1279f390859f?auto=format&fit=crop&w=900&q=80', ingredients: [{ name: 'French Fries', qty: 1 }] },
+  { id: 5, name: 'Large Fries', category: 'Sides', price: 1500, barcode: '8901116000059', image: 'https://images.unsplash.com/photo-1541592106381-b31e9677c0e5?auto=format&fit=crop&w=900&q=80', ingredients: [{ name: 'French Fries', qty: 2 }] },
+  { id: 6, name: 'Soft Drink', category: 'Drinks', price: 500, barcode: '8901116000066', image: 'https://images.unsplash.com/photo-1622483767028-3f66f2b7420b?auto=format&fit=crop&w=900&q=80', ingredients: [{ name: 'Soft Drink', qty: 1 }] },
+  { id: 7, name: 'Pepsi Combo', category: 'Combos', price: 3000, barcode: '8901116000073', image: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=900&q=80', ingredients: [{ name: 'Beef Patty', qty: 1 }, { name: 'Burger Bun', qty: 1 }, { name: 'French Fries', qty: 1 }, { name: 'Soft Drink', qty: 1 }, { name: 'Packaging Box', qty: 1 }] },
+  { id: 8, name: 'Family Meal', category: 'Combos', price: 5200, barcode: '8901116000080', image: 'https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=900&q=80', ingredients: [{ name: 'Beef Patty', qty: 2 }, { name: 'Burger Bun', qty: 2 }, { name: 'Cheese Slice', qty: 2 }, { name: 'French Fries', qty: 2 }, { name: 'Soft Drink', qty: 2 }, { name: 'Packaging Box', qty: 2 }] }
 ];
 
 const defaultSettings = {
@@ -71,7 +72,7 @@ const defaultSettings = {
   loyaltyPointValue: 1,
   features: {
     tables: false, kitchen: false, delivery: false, modifiers: false, tips: false,
-    reorder: false, photos: false, online: false, branches: false, receipts: false
+    reorder: false, photos: true, online: false, branches: false, receipts: false
   },
   tables: [],
   branches: [],
@@ -79,17 +80,107 @@ const defaultSettings = {
   deliveryFee: 0,
   deliveryRiderLabel: 'Rider',
   serviceChargeRate: 0,
-  tipOptions: [500, 1000, 2000]
+  tipOptions: [500, 1000, 2000],
+  hardware: {
+    touch: false,
+    barcode: false,
+    printer: true,
+    cashDrawer: false,
+    scale: false,
+    cardReader: false,
+    clientDisplay: false
+  }
 };
 
-const ROLE_LABELS = { admin: 'Owner', manager: 'Manager', cashier: 'Cashier', kitchen: 'Kitchen' };
+const ROLE_LABELS = { superadmin: 'Super Admin', admin: 'Owner', manager: 'Manager', cashier: 'Cashier', audit: 'Audit' };
 
 const ROLE_PANELS = {
-  admin: ['dashboard', 'pos', 'menu', 'inventory', 'leftover', 'promos', 'orders', 'bookorders', 'reports', 'audit', 'settings'],
-  manager: ['dashboard', 'menu', 'inventory', 'leftover', 'promos', 'orders', 'bookorders', 'reports', 'audit'],
+  superadmin: ['dashboard', 'pos', 'menu', 'inventory', 'leftover', 'promos', 'orders', 'bookorders', 'shift', 'reports', 'audit', 'settings'],
+  admin: ['dashboard', 'pos', 'menu', 'inventory', 'leftover', 'promos', 'orders', 'bookorders', 'shift', 'reports', 'audit', 'settings'],
+  manager: ['dashboard', 'menu', 'inventory', 'leftover', 'promos', 'orders', 'bookorders', 'shift', 'reports', 'audit'],
   cashier: ['pos'],
-  kitchen: ['dashboard', 'menu', 'inventory', 'leftover', 'orders']
+  audit: ['reports', 'inventory', 'menu', 'orders', 'bookorders']
 };
+
+const TERMINAL_BRANCH_KEY = 'ff_terminal_branch';
+const TERMINAL_SYSTEM_KEY = 'ff_terminal_system';
+const TERMINAL_IP_KEY = 'ff_terminal_ip';
+const TERMINAL_ID_KEY = 'ff_terminal_id';
+const TERMINAL_NAMED_KEY = 'ff_terminal_named';
+const THEME_KEY = 'ff_theme';
+
+function getTerminalIp() {
+  try { return localStorage.getItem(TERMINAL_IP_KEY) || ''; } catch (error) { return ''; }
+}
+
+function getTerminalId() {
+  try {
+    let id = localStorage.getItem(TERMINAL_ID_KEY);
+    if (!id) {
+      id = 't-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+      localStorage.setItem(TERMINAL_ID_KEY, id);
+    }
+    return id;
+  } catch (error) {
+    return 't-' + Date.now().toString(36);
+  }
+}
+
+function isTerminalNamed() {
+  try { return localStorage.getItem(TERMINAL_NAMED_KEY) === '1'; } catch (error) { return false; }
+}
+
+function markTerminalNamed() {
+  try { localStorage.setItem(TERMINAL_NAMED_KEY, '1'); } catch (error) {}
+}
+
+function getSavedTheme() {
+  try { return localStorage.getItem(THEME_KEY) || 'light'; } catch (error) { return 'light'; }
+}
+
+function applyTheme(theme) {
+  const safe = theme === 'dark' ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', safe);
+  try { localStorage.setItem(THEME_KEY, safe); } catch (error) {}
+}
+
+function toggleTheme() {
+  if (currentUser && currentUser.role === 'cashier') return;
+  const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  applyTheme(next);
+  logAudit('Theme changed', `${next === 'dark' ? 'Dark' : 'Light'} mode enabled by ${currentUser ? currentUser.name : 'user'}`);
+  showToast(`${next === 'dark' ? 'Dark' : 'Light'} mode enabled.`, 'success');
+}
+
+function getTerminalSystem() {
+  try { return localStorage.getItem(TERMINAL_SYSTEM_KEY) || ''; } catch (error) { return ''; }
+}
+
+function getTerminalSystemLabel() {
+  return getTerminalSystem() || 'System 1';
+}
+
+function setTerminalSystem(name) {
+  try {
+    if (name && name.trim()) localStorage.setItem(TERMINAL_SYSTEM_KEY, name.trim());
+    else localStorage.removeItem(TERMINAL_SYSTEM_KEY);
+  } catch (error) {}
+}
+
+function isSuperAdmin() {
+  return !!currentUser && currentUser.role === 'superadmin';
+}
+
+function getTerminalBranch() {
+  try { return localStorage.getItem(TERMINAL_BRANCH_KEY) || ''; } catch (error) { return ''; }
+}
+
+function setTerminalBranch(name) {
+  try {
+    if (name) localStorage.setItem(TERMINAL_BRANCH_KEY, name);
+    else localStorage.removeItem(TERMINAL_BRANCH_KEY);
+  } catch (error) {}
+}
 
 function getRolePanels() {
   const role = currentUser?.role || 'admin';
@@ -100,7 +191,7 @@ function getRolePanels() {
   if (features.tables) extra.push('tables');
   if (features.kitchen) extra.push('kitchen');
   if (features.reorder) extra.push('purchaseorders');
-  if (role === 'admin') extra.push('fullpackage');
+  if (role === 'admin' || role === 'superadmin') extra.push('fullpackage');
   return [...new Set([...base, ...extra])];
 }
 
@@ -122,10 +213,14 @@ function applyNavPermissions() {
   if (logoutBtn) {
     logoutBtn.classList.toggle('hidden', role !== 'cashier');
   }
+  const themeBtn = document.getElementById('theme-toggle-btn');
+  if (themeBtn) {
+    themeBtn.classList.toggle('hidden', role === 'cashier');
+  }
 }
 
 function canVoid() {
-  return !!(currentUser && ['admin', 'manager'].includes(currentUser.role));
+  return !!(currentUser && ['superadmin', 'admin', 'manager'].includes(currentUser.role));
 }
 
 function getPaymentMethods() {
@@ -155,6 +250,7 @@ const SERVER_KEYS = Object.values(STORAGE_KEYS).filter((key) => !['session', 'pa
 
 const memoryStore = {};
 const lastLocalWrite = {};
+const pendingPushKeys = new Set();
 let serverOnline = false;
 let serverWriteQueue = Promise.resolve();
 let sseSource = null;
@@ -183,6 +279,7 @@ function initStorage() {
   ensure(STORAGE_KEYS.refunds, []);
   ensure(STORAGE_KEYS.purchaseOrders, []);
   ensure(STORAGE_KEYS.bookOrders, []);
+  ensure(STORAGE_KEYS.suppliers, []);
 }
 
 function getFromStorage(key) {
@@ -211,7 +308,10 @@ function pushToServer(key, value) {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(value)
-    }).catch(() => { serverOnline = false; })
+    }).then((res) => {
+      if (res.ok) pendingPushKeys.delete(key);
+      else pendingPushKeys.add(key);
+    }).catch(() => { pendingPushKeys.add(key); })
   );
 }
 
@@ -222,6 +322,10 @@ function connectServerEvents() {
     sseSource.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data);
+        if (msg && msg.key === 'systems') {
+          handleSystemsUpdate(msg.value || []);
+          return;
+        }
         if (msg && msg.key && memoryStore[msg.key] !== undefined) {
           memoryStore[msg.key] = msg.value;
           refreshLivePanels();
@@ -245,9 +349,197 @@ async function initServerSync() {
     });
     serverOnline = true;
     connectServerEvents();
+    sendHeartbeat();
   } catch (error) {
     serverOnline = false;
   }
+}
+
+let connectedSystems = [];
+let knownOnlineSystems = new Set();
+let systemsInitialized = false;
+
+async function sendHeartbeat() {
+  if (!serverOnline) return;
+  try {
+    const res = await fetch('/api/heartbeat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: getTerminalId(), system: getTerminalSystem(), user: currentUser ? currentUser.name : '' })
+    });
+    if (res.ok) {
+      const payload = await res.json();
+      if (payload && payload.ip) {
+        try { localStorage.setItem(TERMINAL_IP_KEY, payload.ip); } catch (error) {}
+      }
+      if (payload && payload.system && !isTerminalNamed()) {
+        setTerminalSystem(payload.system);
+        const input = document.getElementById('terminal-system-input');
+        if (input && !input.value) input.value = payload.system;
+        const systemEl = document.getElementById('user-system');
+        if (systemEl) systemEl.textContent = getTerminalSystemLabel();
+        const ipEl = document.getElementById('terminal-ip-display');
+        if (ipEl) ipEl.textContent = formatTerminalIdentity();
+      }
+    }
+  } catch (error) {}
+}
+
+async function pollSystems() {
+  if (!serverOnline) return;
+  try {
+    const res = await fetch('/api/systems', { cache: 'no-store' });
+    if (!res.ok) return;
+    const payload = await res.json();
+    handleSystemsUpdate(payload.systems || []);
+  } catch (error) {}
+}
+
+function handleSystemsUpdate(list) {
+  connectedSystems = list || [];
+  const canNotify = !!currentUser && ['superadmin', 'admin', 'manager'].includes(currentUser.role);
+  if (canNotify && systemsInitialized) {
+    const onlineNow = new Map(connectedSystems.filter((entry) => entry.online).map((entry) => [entry.id, entry]));
+    knownOnlineSystems.forEach((id) => {
+      if (!onlineNow.has(id)) {
+        const entry = connectedSystems.find((item) => item.id === id);
+        if (entry) showToast(`💻 ${entry.name} is now offline.`, 'info');
+      }
+    });
+    onlineNow.forEach((entry, id) => {
+      if (!knownOnlineSystems.has(id)) {
+        showToast(`💻 ${entry.name} is connected${entry.user ? ' · ' + entry.user : ''}.`, 'success');
+      }
+    });
+  }
+  knownOnlineSystems = new Set(connectedSystems.filter((entry) => entry.online).map((entry) => entry.id));
+  systemsInitialized = true;
+  renderConnectedSystems();
+}
+
+function timeAgo(ts) {
+  if (!ts) return '—';
+  const seconds = Math.max(0, Math.floor((Date.now() - ts) / 1000));
+  if (seconds < 5) return 'just now';
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  return `${hours}h ago`;
+}
+
+function detectSubnet() {
+  const host = location.hostname || '';
+  if (host && host !== 'localhost' && host !== '127.0.0.1' && /^\d+\.\d+\.\d+\.\d+$/.test(host)) {
+    return host.split('.').slice(0, 3).join('.');
+  }
+  return '192.168.1';
+}
+
+function detectPort() {
+  return location.port || '5501';
+}
+
+function toggleLocateServer() {
+  const panel = document.getElementById('locate-server-panel');
+  if (!panel) return;
+  panel.classList.toggle('hidden');
+  if (!panel.classList.contains('hidden')) {
+    const subnetInput = document.getElementById('locate-subnet');
+    if (subnetInput && !subnetInput.value) subnetInput.value = detectSubnet();
+    const portInput = document.getElementById('locate-port');
+    if (portInput && !portInput.value) portInput.value = detectPort();
+    document.getElementById('locate-results').innerHTML = '';
+  }
+}
+
+async function probeServer(ip, port) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 350);
+  try {
+    const res = await fetch(`http://${ip}:${port}/api/info`, { signal: controller.signal, mode: 'cors' });
+    if (!res.ok) return null;
+    const info = await res.json();
+    if (info && info.app === 'FasterFood POS') return { ip, port, info };
+    return null;
+  } catch (error) {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function scanForServers() {
+  const resultsEl = document.getElementById('locate-results');
+  const subnetInput = document.getElementById('locate-subnet');
+  const portInput = document.getElementById('locate-port');
+  if (!resultsEl || !subnetInput) return;
+  const prefix = subnetInput.value.trim().replace(/\.+$/, '');
+  const port = String(portInput.value || '5501').trim();
+  if (!/^\d{1,3}(\.\d{1,3}){2}$/.test(prefix)) {
+    resultsEl.innerHTML = '<div class="locate-empty">Enter a valid subnet like 192.168.1</div>';
+    return;
+  }
+  resultsEl.innerHTML = '<div class="locate-empty">Scanning 1–254 hosts on port ' + port + '…</div>';
+  const found = [];
+  let index = 1;
+  let done = 0;
+  const concurrency = 16;
+  const workers = Array.from({ length: concurrency }, async () => {
+    while (true) {
+      const i = index++;
+      if (i > 254) break;
+      const ip = `${prefix}.${i}`;
+      const result = await probeServer(ip, port);
+      if (result) found.push(result);
+      done += 1;
+      if (done % 40 === 0) {
+        resultsEl.innerHTML = `<div class="locate-empty">Scanning… ${done}/254</div>`;
+      }
+    }
+  });
+  await Promise.all(workers);
+  found.sort((a, b) => a.ip.localeCompare(b.ip, undefined, { numeric: true }));
+  if (!found.length) {
+    resultsEl.innerHTML = '<div class="locate-empty">No FasterFood POS server found. Check the IP range, port, and that the server PC allows port ' + port + ' through the firewall.</div>';
+    return;
+  }
+  resultsEl.innerHTML = found.map((entry) => {
+    const url = `http://${entry.ip}:${entry.port}`;
+    return `
+      <div class="locate-result">
+        <span class="locate-dot"></span>
+        <div class="locate-info">
+          <strong>FasterFood POS</strong>
+          <small>${url}${entry.info.addresses && entry.info.addresses.length ? ' · ' + entry.info.addresses.map((a) => a.address).join(', ') : ''}</small>
+        </div>
+        <a class="action-btn primary" href="${url}">Open</a>
+      </div>`;
+  }).join('');
+}
+
+function renderConnectedSystems() {
+  const card = document.getElementById('connected-systems-card');
+  const container = document.getElementById('connected-systems');
+  if (!card || !container) return;
+  const show = !!currentUser && ['superadmin', 'admin', 'manager'].includes(currentUser.role);
+  card.classList.toggle('hidden', !show);
+  if (!show) return;
+  const countEl = document.getElementById('connected-systems-count');
+  const onlineCount = connectedSystems.filter((entry) => entry.online).length;
+  if (countEl) countEl.textContent = `${onlineCount} of ${connectedSystems.length} online`;
+  container.innerHTML = connectedSystems.length
+    ? connectedSystems.map((entry) => `
+      <div class="sys-card ${entry.online ? 'sys-online' : 'sys-offline'}">
+        <span class="sys-status"></span>
+        <div class="sys-info">
+          <strong>${escapeHtml(entry.name)}</strong>
+          <small>${entry.user ? escapeHtml(entry.user) : 'No user signed in'}${entry.ip ? ' · ' + escapeHtml(entry.ip) : ''}</small>
+        </div>
+        <span class="sys-seen">${entry.online ? 'Online' : 'Offline · ' + timeAgo(entry.lastSeen)}</span>
+      </div>
+    `).join('')
+    : '<div class="list-row"><div>No systems connected yet.</div><span class="badge info">Waiting</span></div>';
 }
 
 function saleDateKey(sale) {
@@ -478,17 +770,10 @@ function closeNav() {
   document.getElementById('app-view').classList.remove('nav-open');
 }
 
-let settingsUnlocked = false;
-
 function showPanel(panelName) {
   const allowed = getRolePanels();
   if (currentUser && !allowed.includes(panelName)) {
     panelName = allowed[0];
-  }
-
-  if (panelName === 'settings' && !settingsUnlocked) {
-    openSettingsAuth();
-    return;
   }
 
   closeStockAlertPanel();
@@ -514,6 +799,7 @@ function showPanel(panelName) {
   if (panelName === 'orders') { ordersPage = 1; renderOrdersManager(); renderClosingsList(); }
   if (panelName === 'bookorders') renderBookOrdersPanel();
   if (panelName === 'reports') { reportPage = 1; renderReports(); }
+  if (panelName === 'shift') renderShiftManager();
   if (panelName === 'settings') renderSettings();
   if (panelName === 'audit') { auditPage = 1; renderAuditManager(); }
   if (panelName === 'tables') renderTablesPanel();
@@ -552,6 +838,8 @@ function login() {
   showPanel('dashboard');
   logAudit('Login', `Signed in as ${match.name} (@${match.username})`);
   checkLowStockNotification(true);
+  sendHeartbeat();
+  pollSystems();
   renderShiftGate();
   if (match.role === 'cashier') enterFullScreen();
 }
@@ -576,7 +864,6 @@ function logout() {
   exitFullScreen();
   currentUser = null;
   cart = [];
-  settingsUnlocked = false;
   cartCustomer = null;
   cartLoyaltyPoints = 0;
   pendingSavedOrderId = null;
@@ -784,12 +1071,14 @@ function renderAuth() {
   const userNameEl = document.getElementById('user-name');
   const userRoleEl = document.getElementById('user-role');
   const avatar = document.getElementById('user-avatar');
+  const systemEl = document.getElementById('user-system');
 
   if (!currentUser) return;
 
   userNameEl.textContent = currentUser.name;
   userRoleEl.textContent = ROLE_LABELS[currentUser.role] || 'Shift staff';
   avatar.textContent = currentUser.name.charAt(0).toUpperCase();
+  if (systemEl) systemEl.textContent = getTerminalSystemLabel();
   applyNavPermissions();
   refreshFeatureUI();
 }
@@ -809,17 +1098,34 @@ function isLightColor(hex) {
 
 function renderDashboard() {
   const sales = getFromStorage(STORAGE_KEYS.sales);
-  const inventory = getFromStorage(STORAGE_KEYS.inventory);
+  const inventory = getBranchInventory();
   const totalRevenue = sales.reduce((sum, sale) => sum + sale.total, 0);
   const totalOrders = sales.length;
   const averageOrder = totalOrders ? totalRevenue / totalOrders : 0;
   const lowStockCount = inventory.filter((item) => item.stock <= item.reorderLevel).length;
 
+  const todaySales = getTodaySales().filter((sale) => !sale.savedOnly);
+  const menuAll = getFromStorage(STORAGE_KEYS.menu);
+  const costById = {};
+  menuAll.forEach((item) => { costById[item.id] = getMenuItemCost(item); });
+  let todayRevenue = 0;
+  let todayCogs = 0;
+  todaySales.forEach((sale) => {
+    if (sale.refunded) return;
+    todayRevenue += sale.total;
+    sale.items.forEach((line) => {
+      todayCogs += (costById[line.id] || 0) * (Number(line.qty) || 0);
+    });
+  });
+  const todayMargin = todayRevenue > 0 ? ((todayRevenue - todayCogs) / todayRevenue) * 100 : 0;
+
   const statCards = [
     { label: 'Revenue', value: formatCurrency(totalRevenue), icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M21 7v5h-5"/></svg>', tone: 'red' },
     { label: 'Orders', value: totalOrders, icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5h12l1.5 17h-15z"/><path d="M9 8.5h6"/><path d="M9 12.5h6"/></svg>', tone: 'blue' },
-    { label: 'Average order', value: formatCurrency(averageOrder), icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6.5h16v11H4z"/><path d="M8 6.5v2.5h8V6.5"/><path d="M9 6.5V5h6v1.5"/></svg>', tone: 'green' },
-    { label: 'Low stock', value: lowStockCount, icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>', tone: 'amber' }
+    { label: 'Average order', value: formatCurrency(averageOrder), icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6.5h16v11H4z"/><path d="M8 6.5v2.5h8V6.5"/><path d="M9 6.5V5h6v1.5"/></svg>', tone: 'lemon' },
+    { label: 'Low stock', value: lowStockCount, icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>', tone: 'amber' },
+    { label: 'Today', value: formatCurrency(getTodaySales().reduce((sum, sale) => sum + sale.total, 0)), icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/><path d="M9.5 3h5"/></svg>', tone: 'violet' },
+    { label: 'Gross margin today', value: `${todayMargin.toFixed(1)}%`, icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>', tone: 'green' }
   ];
 
   document.getElementById('dashboard-stats').innerHTML = statCards.map((stat) => `
@@ -977,6 +1283,8 @@ function renderRevenueChart() {
 
 function renderCategoryPie() {
   renderCategoryPieInto('category-pie-chart', getFromStorage(STORAGE_KEYS.sales));
+  pollSystems();
+  renderConnectedSystems();
 }
 
 function renderCategoryPieInto(containerId, sales) {
@@ -1210,8 +1518,8 @@ function renderMenuGrid(grid, items, palette, categoryColor) {
   const wrapper = document.createElement('div');
   wrapper.className = 'menu-grid-viewport';
   const padX = 12;
-  const gap = 8;
-  const tileH = 130;
+  const gap = 10;
+  const tileH = 132;
   const rowH = tileH + gap;
   grid.innerHTML = '';
   grid.appendChild(wrapper);
@@ -1241,10 +1549,16 @@ function renderMenuGrid(grid, items, palette, categoryColor) {
     const tileColor = item.color || categoryColor || palette[gridIndex % palette.length];
     const lightTile = isLightColor(tileColor) ? ' light-tile' : '';
     const selected = selectedMenuItemId === item.id ? ' selected' : '';
+    const badgeText = availability.status === 'Out' ? 'Not Available' : availability.status === 'Low' ? 'Low Stock' : 'Available';
+    const badgeClass = availability.status === 'Out' ? 'menu-item-badge unavailable' : availability.status === 'Low' ? 'menu-item-badge low' : 'menu-item-badge available';
     return `
       <button class="menu-item${lightTile}${selected}" data-id="${item.id}" style="--tile:${tileColor}" ${availability.status === 'Out' ? 'disabled' : ''}>
-        ${getFeature('photos') && item.image ? `<img class="menu-item-img" src="${item.image}" alt="" />` : ''}
-        <div class="menu-item-name">${escapeHtml(item.name)}</div>
+        <span class="${badgeClass}">${badgeText}</span>
+        ${getFeature('photos') && item.image ? `<img class="menu-item-img" src="${item.image}" alt="${escapeHtml(item.name)}" />` : ''}
+        <div class="menu-item-info">
+          <div class="menu-item-name">${escapeHtml(item.name)}</div>
+          <div class="menu-item-price">${formatCurrency(Number(item.price) || 0)}</div>
+        </div>
       </button>
     `;
   };
@@ -1439,7 +1753,7 @@ function getItemAvailability(item) {
 
   const inventory = getFromStorage(STORAGE_KEYS.inventory);
   const availableByIngredient = item.ingredients.map((ingredient) => {
-    const match = inventory.find((entry) => entry.name.toLowerCase() === ingredient.name.toLowerCase());
+    const match = findInventoryRow(inventory, ingredient.name);
     if (!match) return 0;
     return Math.floor(match.stock / ingredient.qty);
   });
@@ -1456,7 +1770,7 @@ function canMakeItem(item, qty = 1) {
   if (!item.ingredients || !item.ingredients.length) return true;
   const inventory = getFromStorage(STORAGE_KEYS.inventory);
   return item.ingredients.every((ingredient) => {
-    const match = inventory.find((entry) => entry.name.toLowerCase() === ingredient.name.toLowerCase());
+    const match = findInventoryRow(inventory, ingredient.name);
     return match && match.stock >= ingredient.qty * qty;
   });
 }
@@ -1465,7 +1779,7 @@ function getItemRemaining(item) {
   if (!item.ingredients || !item.ingredients.length) return null;
   const inventory = getFromStorage(STORAGE_KEYS.inventory);
   const availableByIngredient = item.ingredients.map((ingredient) => {
-    const match = inventory.find((entry) => entry.name.toLowerCase() === ingredient.name.toLowerCase());
+    const match = findInventoryRow(inventory, ingredient.name);
     if (!match) return 0;
     return Math.floor(match.stock / ingredient.qty);
   });
@@ -1813,10 +2127,6 @@ function closeCameraScan() {
   document.getElementById('scan-modal').classList.add('hidden');
 }
 
-function openCashDrawer() {
-  showToast('Cash drawer opened successfully.', 'success');
-}
-
 function computeDealValue(deal, subtotal, items = cart) {
   if (!deal) return 0;
   const subtotalSafe = Number(subtotal) || 0;
@@ -1887,6 +2197,21 @@ function renderPaymentMethods() {
 
   container.querySelectorAll('.pay-method-amount').forEach((input) => {
     input.addEventListener('input', updatePaymentDisplay);
+    input.addEventListener('focus', () => {
+      floatKeyInput = input;
+      if (input._fk === undefined) input._fk = input.value || '';
+      if (!floatKeyboardSuppress) {
+        showFloatKeyboard();
+      }
+    });
+    input.addEventListener('blur', () => {
+      if (!floatKeyboardHover) {
+        hideFloatKeyboard();
+      }
+    });
+    input.addEventListener('input', () => {
+      input._fk = input.value || '';
+    });
   });
 
   const firstInput = container.querySelector('.pay-method-amount');
@@ -1897,6 +2222,8 @@ function handlePaymentRowClick(event, index) {
   if (event.target.classList.contains('pay-method-amount')) return;
   quickFillPayment(index);
 }
+
+let floatKeyboardSuppress = false;
 
 function quickFillPayment(index) {
   const inputs = Array.from(document.querySelectorAll('.pay-method-amount'));
@@ -1909,8 +2236,10 @@ function quickFillPayment(index) {
 
   input.value = remaining > 0 ? remaining.toFixed(2) : '';
   updatePaymentDisplay();
+  floatKeyboardSuppress = true;
   input.focus();
   input.select();
+  floatKeyboardSuppress = false;
 }
 
 function updatePaymentDisplay() {
@@ -1943,10 +2272,57 @@ function getPaymentsBreakdown() {
 
 function closePaymentModal() {
   document.getElementById('payment-modal').classList.add('hidden');
+  hideFloatKeyboard();
 }
+
+let floatKeyInput = null;
+let floatKeyboardHover = false;
+
+function showFloatKeyboard() {
+  const kb = document.getElementById('float-keyboard');
+  if (!kb) return;
+  kb.classList.remove('hidden');
+}
+
+function hideFloatKeyboard() {
+  const kb = document.getElementById('float-keyboard');
+  if (kb) kb.classList.add('hidden');
+  floatKeyInput = null;
+}
+
+function floatKeyboardClose() {
+  hideFloatKeyboard();
+}
+
+function floatKey(key) {
+  if (!floatKeyInput) return;
+  let buffer = floatKeyInput._fk !== undefined ? floatKeyInput._fk : (floatKeyInput.value || '');
+  if (key === 'clear') {
+    buffer = '';
+  } else if (key === 'back') {
+    buffer = buffer.slice(0, -1);
+  } else if (key === '.') {
+    if (!buffer.includes('.')) buffer += '.';
+  } else {
+    if (buffer === '0') buffer = '';
+    buffer += key;
+  }
+  floatKeyInput._fk = buffer;
+  floatKeyInput.value = buffer && buffer !== '.' ? Number(buffer) : '';
+  updatePaymentDisplay();
+}
+
+(function initFloatKeyboard() {
+  const kb = document.getElementById('float-keyboard');
+  if (!kb) return;
+  kb.addEventListener('mousedown', (e) => e.preventDefault());
+  kb.addEventListener('mouseenter', () => { floatKeyboardHover = true; });
+  kb.addEventListener('mouseleave', () => { floatKeyboardHover = false; });
+})();
 
 function buildSaleMeta() {
   const meta = {};
+  meta.system = getTerminalSystemLabel();
   if (getFeature('delivery')) {
     const addressInput = document.getElementById('pay-delivery-address');
     const riderNameInput = document.getElementById('pay-rider-name');
@@ -2000,7 +2376,7 @@ function completeCheckout() {
 
   for (const item of cart) {
     (item.ingredients || []).forEach((ingredient) => {
-      const row = inventory.find((entry) => entry.name.toLowerCase() === ingredient.name.toLowerCase());
+      const row = findInventoryRow(inventory, ingredient.name);
       if (row) {
         row.stock -= ingredient.qty * item.qty;
       }
@@ -2121,7 +2497,10 @@ function completeCheckout() {
   renderOrdersManager();
   closePaymentModal();
   showToast('Payment successful', 'success');
-  printReceipt(sale);
+  if (getHardware('printer')) printReceipt(sale);
+  if (getHardware('cashDrawer') && (sale.payments || []).some((payment) => /cash/i.test(payment.method))) {
+    openCashDrawer();
+  }
   logAudit('Sale', `Invoice #${sale.invoice} · ${formatCurrency(sale.total)}`);
 }
 
@@ -2202,6 +2581,7 @@ function printReceipt(sale) {
         <div class="meta">Invoice #${sale.invoice}</div>
         <div class="meta">${date}</div>
         <div class="meta">Cashier: ${sale.cashier || '—'}</div>
+        ${sale.system ? `<div class="meta">System: ${truncate(sale.system, nameLimit)}</div>` : ''}
         ${sale.branch ? `<div class="meta">Branch: ${truncate(sale.branch, nameLimit)}</div>` : ''}
         ${sale.table ? `<div class="meta">Table: ${truncate(sale.table, nameLimit)}</div>` : ''}
         ${sale.orderType ? `<div class="meta">Type: ${sale.orderType.charAt(0).toUpperCase() + sale.orderType.slice(1)}</div>` : ''}
@@ -2335,7 +2715,8 @@ function closeSavedOrdersModal() {
 }
 
 function openInvoicesModal() {
-  const sales = getFromStorage(STORAGE_KEYS.sales).filter((sale) => !sale.savedOnly);
+  const today = todayKey();
+  const sales = getFromStorage(STORAGE_KEYS.sales).filter((sale) => !sale.savedOnly && saleDateKey(sale) === today);
   const tbody = document.getElementById('invoices-table-body');
   tbody.innerHTML = sales.length
     ? sales.slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).map((sale) => {
@@ -2634,7 +3015,7 @@ function restoreLeftoverStock(record) {
   const ingredients = record.ingredients || [];
   if (ingredients.length) {
     ingredients.forEach((ingredient) => {
-      const row = inventory.find((entry) => entry.name.toLowerCase() === ingredient.name.toLowerCase());
+      const row = findInventoryRow(inventory, ingredient.name);
       if (row) {
         row.stock = (Number(row.stock) || 0) + ingredient.qty * record.qty;
         row.returnedFromLeftover = true;
@@ -2644,7 +3025,7 @@ function restoreLeftoverStock(record) {
       }
     });
   } else {
-    const row = inventory.find((entry) => entry.name.toLowerCase() === record.name.toLowerCase());
+    const row = findInventoryRow(inventory, record.name);
     if (row) {
       row.stock = (Number(row.stock) || 0) + record.qty;
       row.returnedFromLeftover = true;
@@ -2665,6 +3046,7 @@ function restoreLeftoverStock(record) {
       stock: record.qty,
       price: record.price || null,
       reorderLevel: 0,
+      branch: getInventoryBranchContext(),
       createdAt: new Date().toISOString(),
       returnedFromLeftover: true,
       returnedAt: new Date().toISOString(),
@@ -3043,7 +3425,7 @@ function closePromoPicker() {
 }
 
 function renderInventorySummary() {
-  const inventory = getFromStorage(STORAGE_KEYS.inventory);
+  const inventory = getInventoryForManager();
   const totalItems = inventory.length;
   const totalUnits = inventory.reduce((sum, item) => sum + (Number(item.stock) || 0), 0);
   const lowStock = inventory.filter((item) => item.stock <= item.reorderLevel).length;
@@ -3084,14 +3466,15 @@ function exportInventoryCSV() {
     return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
   };
 
-  const header = 'Name,Group,Unit,Stock,Reorder Level,Price';
+  const header = 'Name,Group,Unit,Stock,Reorder Level,Price,Branch';
   const rows = inventory.map((item) => [
     escapeCell(item.name),
     escapeCell(item.group || ''),
     escapeCell(item.unit || 'pcs'),
     item.stock,
     item.reorderLevel,
-    item.price ?? ''
+    item.price ?? '',
+    escapeCell(item.branch || '')
   ].join(','));
 
   const csv = '\uFEFF' + [header, ...rows].join('\r\n');
@@ -3118,7 +3501,9 @@ function handleInventoryImport(event) {
       showToast('No valid product rows found in the file.', 'error');
       return;
     }
-    applyInventoryImport(items);
+    const importSelect = document.getElementById('inventory-import-branch');
+    const targetBranch = importSelect ? importSelect.value : '';
+    applyInventoryImport(items, targetBranch);
   };
   reader.readAsText(file);
 }
@@ -3176,7 +3561,8 @@ function parseInventoryCSV(text) {
     unit: findColumn(['unit']),
     stock: findColumn(['stock', 'qty', 'quantity']),
     reorder: findColumn(['reorder level', 'reorder', 'reorderlevel']),
-    price: findColumn(['price', 'cost'])
+    price: findColumn(['price', 'cost']),
+    branch: findColumn(['branch', 'store'])
   };
 
   const items = [];
@@ -3198,30 +3584,38 @@ function parseInventoryCSV(text) {
       unit: get(col.unit) || 'pcs',
       stock: Number.isFinite(stock) && stock >= 0 ? stock : 0,
       reorderLevel: Number.isFinite(reorder) && reorder >= 0 ? reorder : 10,
-      price: Number.isFinite(price) && price > 0 ? price : null
+      price: Number.isFinite(price) && price > 0 ? price : null,
+      branch: get(col.branch) || ''
     });
   }
   return items;
 }
 
-function applyInventoryImport(items) {
+function applyInventoryImport(items, targetBranch) {
   const inventory = getFromStorage(STORAGE_KEYS.inventory);
+  const branchContext = (targetBranch !== undefined && targetBranch !== null)
+    ? targetBranch
+    : getInventoryBranchContext();
   let added = 0;
   let updated = 0;
 
   items.forEach((item, index) => {
-    const existing = inventory.find((entry) => entry.name.toLowerCase() === item.name.toLowerCase());
+    const target = item.branch || branchContext;
+    const existing = findInventoryRowForBranch(inventory, item.name, target);
     if (existing) {
       existing.group = item.group;
       existing.unit = item.unit;
       existing.stock = item.stock;
       existing.reorderLevel = item.reorderLevel;
       existing.price = item.price;
+      if (target && !existing.branch) existing.branch = target;
       syncMenuFromInventoryItem(existing);
       logStockIn(existing.name, existing.stock, 'CSV import');
       updated++;
     } else {
       const newItem = { id: Date.now() + index, createdAt: new Date().toISOString(), ...item };
+      delete newItem.branch;
+      if (target) newItem.branch = target;
       inventory.push(newItem);
       logStockIn(item.name, item.stock, 'CSV import');
       added++;
@@ -3234,7 +3628,7 @@ function applyInventoryImport(items) {
   renderDashboard();
   renderPOS();
   showToast(`Import complete · ${added} added, ${updated} updated.`, 'success');
-  logAudit('Inventory import', `${added} added, ${updated} updated`);
+  logAudit('Inventory import', `${added} added, ${updated} updated · branch: ${branchContext || 'shared'}`);
 }
 
 function syncMenuFromInventoryItem(inventoryItem) {
@@ -3287,7 +3681,8 @@ function getExpiryBadge(item) {
 }
 
 function renderInventoryManager() {
-  const inventory = getFromStorage(STORAGE_KEYS.inventory);
+  renderBranchSelects();
+  const inventory = getInventoryForManager();
   renderInventorySummary();
   renderVoidedReturns();
 
@@ -3343,10 +3738,6 @@ const groups = Object.entries(grouped).sort((a, b) => a[0].localeCompare(b[0]));
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6.5h16"/><path d="M9 6.5V4.5h6v2"/><path d="M6 6.5l.8 13h10.4l.8-13"/><path d="M10 10.5v5.5M14 10.5v5.5"/></svg>
           <span>Delete marked</span>
         </button>
-        <button class="action-btn mark-btn" onclick="printBarcodeLabels()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7v10"/><path d="M8 7v10"/><path d="M12 7v10"/><path d="M16 7v6"/><path d="M16 16v1"/><path d="M20 7v10"/></svg>
-          <span>Print labels</span>
-        </button>
       </div>
     </div>
     ${groups.length
@@ -3388,7 +3779,7 @@ const groups = Object.entries(grouped).sort((a, b) => a[0].localeCompare(b[0]));
                         <div class="inv-item">
                           <span class="inv-avatar" style="background:${avatarBg};color:${avatarFg}">${item.name.charAt(0).toUpperCase()}</span>
                           <div class="inv-item-text">
-                            <strong>${item.name}${item.returnedFromLeftover ? ' <span class="returned-tag">Returned</span>' : ''}</strong>
+                            <strong>${item.name}${item.returnedFromLeftover ? ' <span class="returned-tag">Returned</span>' : ''}${item.branch ? ` <span class="branch-tag">${escapeHtml(item.branch)}</span>` : ''}</strong>
                             <span>${item.id < 0 ? 'Imported' : ''}</span>
                           </div>
                         </div>
@@ -3417,10 +3808,6 @@ const groups = Object.entries(grouped).sort((a, b) => a[0].localeCompare(b[0]));
                           <button class="table-action danger" onclick="requestInventoryDelete(${item.id})" title="Delete">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6.5h16"/><path d="M9 6.5V4.5h6v2"/><path d="M6 6.5l.8 13h10.4l.8-13"/><path d="M10 10.5v5.5M14 10.5v5.5"/></svg>
                             <span>Delete</span>
-                          </button>
-                          <button class="table-action" onclick="printItemLabel(${item.id})" title="Print barcode label">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7v10"/><path d="M8 7v10"/><path d="M12 7v10"/><path d="M16 7v6"/><path d="M16 16v1"/><path d="M20 7v10"/></svg>
-                            <span>Label</span>
                           </button>
                         </div>
                       </td>
@@ -3769,6 +4156,7 @@ function renderOrdersManager() {
                 ${sale.table ? `<span class="status-tag table">Table ${escapeHtml(sale.table)}</span>` : ''}
                 ${sale.orderType && sale.orderType !== 'dinein' ? `<span class="status-tag ${sale.orderType}">${sale.orderType.charAt(0).toUpperCase() + sale.orderType.slice(1)}</span>` : ''}
                 ${sale.branch ? `<span class="status-tag branch">${escapeHtml(sale.branch)}</span>` : ''}
+                ${sale.system ? `<span class="status-tag system">${escapeHtml(sale.system)}</span>` : ''}
                 ${hasVoid ? '<span class="status-tag voided">Voided</span>' : ''}
               </td>
               <td class="order-time">${new Date(sale.createdAt).toLocaleString()}</td>
@@ -3852,7 +4240,7 @@ function confirmVoidAuth() {
     return;
   }
   const users = getFromStorage(STORAGE_KEYS.users);
-  const authorized = users.some((user) => user.role === 'admin' && user.password === entered)
+  const authorized = users.some((user) => ['superadmin', 'admin'].includes(user.role) && user.password === entered)
     || (currentUser && currentUser.password === entered);
   if (!authorized) {
     document.getElementById('void-auth-error').textContent = 'Incorrect admin password.';
@@ -3951,11 +4339,11 @@ function returnVoidedItem(voidId) {
 
   if (menuItem && menuItem.ingredients && menuItem.ingredients.length) {
     menuItem.ingredients.forEach((ingredient) => {
-      const row = inventory.find((entry) => entry.name.toLowerCase() === ingredient.name.toLowerCase());
+      const row = findInventoryRow(inventory, ingredient.name);
       if (row) row.stock += ingredient.qty * record.qty;
     });
   } else {
-    const row = inventory.find((entry) => entry.name.toLowerCase() === record.itemName.toLowerCase());
+    const row = findInventoryRow(inventory, record.itemName);
     if (row) row.stock += record.qty;
   }
 
@@ -4099,7 +4487,7 @@ const FEATURE_REPORT_TABS = {
   receipts: 'receipts'
 };
 
-const BASE_REPORT_TABS = ['sales', 'invoice', 'summary', 'analysis', 'inventory', 'menu', 'orders', 'tax', 'payments', 'stock', 'products', 'daily', 'transactions', 'customers', 'refunds', 'purchases', 'closings', 'price', 'shift', 'void', 'leftover', 'promos', 'bookorders'];
+const BASE_REPORT_TABS = ['sales', 'invoice', 'summary', 'totals', 'analysis', 'inventory', 'menu', 'orders', 'tax', 'payments', 'stock', 'products', 'daily', 'weekly', 'transactions', 'customers', 'refunds', 'purchases', 'closings', 'price', 'shift', 'void', 'leftover', 'promos', 'bookorders', 'systems', 'profit', 'valuation', 'profitloss', 'suppliers'];
 
 function getActiveReportTabs() {
   const features = getFeatures();
@@ -4161,6 +4549,7 @@ const REPORT_GRAPH_CONFIGS = {
   },
   invoice: { graph: { label: 'Invoice totals', categoryKey: 'order', valueKey: 'total', money: true } },
   summary: { graph: { label: 'Sales metrics', categoryKey: 'metric', valueKey: 'value', displayKey: 'value', aggregate: false } },
+  totals: { graph: { label: 'Total analysis', categoryKey: 'metric', valueKey: 'value', displayKey: 'value', aggregate: false } },
   analysis: { graph: { label: 'Top products by revenue', categoryKey: 'product', valueKey: 'revenue', money: true } },
   inventory: { graph: { label: 'Stock levels', categoryKey: 'name', valueKey: 'stock' } },
   menu: { graph: { label: 'Menu prices', categoryKey: 'name', valueKey: 'price', money: true } },
@@ -4170,6 +4559,7 @@ const REPORT_GRAPH_CONFIGS = {
   stock: { graph: { label: 'Stock added by product', categoryKey: 'product', valueKey: 'qty' } },
   products: { graph: { label: 'Product sold totals', categoryKey: 'product', valueKey: 'total', money: true } },
   daily: { graph: { label: 'Daily sales', categoryKey: 'date', valueKey: 'total', money: true } },
+  weekly: { graph: { label: 'Weekly sales', categoryKey: 'week', valueKey: 'total', money: true } },
   transactions: { graph: { label: 'Transactions by day', categoryKey: 'date', valueKey: 'total', money: true } },
   customers: { graph: { label: 'Customer spend', categoryKey: 'name', valueKey: 'spend', money: true } },
   refunds: { graph: { label: 'Refund totals', categoryKey: 'invoice', valueKey: 'total', money: true } },
@@ -4187,6 +4577,7 @@ const REPORT_GRAPH_CONFIGS = {
   tips: { graph: { label: 'Tips & service charge by order', categoryKey: 'order', valueKey: 'tip', money: true } },
   purchaseorders: { graph: { label: 'Purchase order costs', categoryKey: 'number', valueKey: 'totalCost', money: true } },
   branches: { graph: { label: 'Revenue by branch', categoryKey: 'branch', valueKey: 'total', money: true } },
+  systems: { graph: { label: 'Revenue by system', categoryKey: 'system', valueKey: 'total', money: true } },
   receipts: { graph: { label: 'Receipts sent per day', categoryKey: 'date', valueKey: 'count', dateGroup: true } }
 };
 
@@ -4277,6 +4668,27 @@ function getFilteredReportDef() {
   return { ...def, rows };
 }
 
+function getInventoryCost(item) {
+  const cost = Number(item && item.lastCost);
+  if (Number.isFinite(cost) && cost > 0) return cost;
+  const price = Number(item && item.price);
+  return Number.isFinite(price) && price > 0 ? price : 0;
+}
+
+function getMenuItemCost(menuItem) {
+  const ingredients = (menuItem && menuItem.ingredients) || [];
+  if (!ingredients.length) return 0;
+  const inventory = getFromStorage(STORAGE_KEYS.inventory);
+  return ingredients.reduce((sum, ingredient) => {
+    const invItem = inventory.find((entry) => String(entry.name).toLowerCase() === String(ingredient.name).toLowerCase());
+    return sum + (Number(ingredient.qty) || 0) * getInventoryCost(invItem);
+  }, 0);
+}
+
+function formatPct(value) {
+  return `${(Number(value) || 0).toFixed(1)}%`;
+}
+
 function buildReport(tab) {
   const rangeLabel = getRangeLabel();
 
@@ -4289,6 +4701,7 @@ function buildReport(tab) {
         { key: 'date', label: 'Date' },
         { key: 'order', label: 'Invoice' },
         { key: 'cashier', label: 'Cashier' },
+        { key: 'system', label: 'System' },
         { key: 'items', label: 'Items' },
         { key: 'subtotal', label: 'Subtotal', money: true },
         { key: 'promo', label: 'Promo', money: true },
@@ -4301,6 +4714,7 @@ function buildReport(tab) {
         date: new Date(sale.createdAt).toLocaleString(),
         order: `Invoice #${sale.invoice}`,
         cashier: sale.cashier || '—',
+        system: sale.system || '—',
         items: sale.items.reduce((sum, item) => sum + item.qty, 0),
         subtotal: Number.isFinite(sale.subtotal) ? sale.subtotal : sale.total - getSaleTax(sale),
         promo: sale.promo ? (Number(sale.promo.amount) || 0) : 0,
@@ -4318,6 +4732,7 @@ function buildReport(tab) {
       order: `Invoice #${sale.invoice}`,
       date: new Date(sale.createdAt).toLocaleString(),
       cashier: sale.cashier || '—',
+      system: sale.system || '—',
       customer: sale.customerName || '—',
       items: sale.items.reduce((sum, item) => sum + item.qty, 0),
       subtotal: Number.isFinite(sale.subtotal) ? sale.subtotal : sale.total - getSaleTax(sale),
@@ -4343,6 +4758,7 @@ function buildReport(tab) {
         { key: 'order', label: 'Invoice' },
         { key: 'date', label: 'Date & time' },
         { key: 'cashier', label: 'Cashier' },
+        { key: 'system', label: 'System' },
         { key: 'customer', label: 'Customer' },
         { key: 'items', label: 'Items' },
         { key: 'subtotal', label: 'Subtotal', money: true },
@@ -4519,7 +4935,7 @@ function buildReport(tab) {
       });
     });
     return {
-      title: 'Orders report',
+      title: 'Sales History report',
       subtitle: `${rows.length} line item(s) · ${rangeLabel}`,
       columns: [
         { key: 'order', label: 'Invoice' },
@@ -4592,6 +5008,25 @@ function buildReport(tab) {
         methodTotals[method].count += 1;
         methodTotals[method].total += payment.amount;
       });
+    });
+
+    const { start, end } = getReportDateRange();
+    getFromStorage(STORAGE_KEYS.bookOrders).forEach((order) => {
+      const created = new Date(order.createdAt);
+      if (created < start || created > end) return;
+      const partAmount = Number(order.partPayment) || 0;
+      if (order.partBank && order.partBank !== 'None' && partAmount > 0 && !order.paymentMethod) {
+        if (!methodTotals[order.partBank]) methodTotals[order.partBank] = { count: 0, total: 0 };
+        methodTotals[order.partBank].count += 1;
+        methodTotals[order.partBank].total += partAmount;
+      }
+      const collectMethod = order.collectedBank || order.paymentMethod;
+      const collectAmount = order.collectedBank ? (Number(order.collectedBalance) || 0) : (order.paymentMethod ? partAmount : 0);
+      if (collectMethod && collectMethod !== 'None' && collectAmount > 0) {
+        if (!methodTotals[collectMethod]) methodTotals[collectMethod] = { count: 0, total: 0 };
+        methodTotals[collectMethod].count += 1;
+        methodTotals[collectMethod].total += collectAmount;
+      }
     });
 
     const rows = Object.entries(methodTotals).map(([method, data]) => ({
@@ -4750,6 +5185,65 @@ function buildReport(tab) {
     };
   }
 
+  if (tab === 'weekly') {
+    const sales = filterSalesByDate(getFromStorage(STORAGE_KEYS.sales)).filter((sale) => !sale.savedOnly);
+    const weeks = {};
+    sales.forEach((sale) => {
+      const created = new Date(sale.createdAt);
+      const day = (created.getDay() + 6) % 7;
+      const monday = new Date(created);
+      monday.setDate(created.getDate() - day);
+      monday.setHours(0, 0, 0, 0);
+      const sunday = new Date(monday);
+      sunday.setDate(monday.getDate() + 6);
+      const weekKey = monday.toISOString().slice(0, 10);
+      if (!weeks[weekKey]) {
+        weeks[weekKey] = {
+          label: `${monday.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })} – ${sunday.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}`,
+          orders: 0, items: 0, subtotal: 0, tax: 0, total: 0
+        };
+      }
+      const activeItems = sale.items.filter((item) => !item.voided);
+      weeks[weekKey].orders += 1;
+      weeks[weekKey].items += activeItems.reduce((sum, item) => sum + item.qty, 0);
+      weeks[weekKey].subtotal += Number.isFinite(sale.subtotal) ? sale.subtotal : sale.total - getSaleTax(sale);
+      weeks[weekKey].tax += getSaleTax(sale);
+      weeks[weekKey].total += sale.total;
+    });
+
+    const rows = Object.entries(weeks).sort((a, b) => a[0].localeCompare(b[0])).map(([, data]) => ({
+      week: data.label,
+      orders: data.orders,
+      items: data.items,
+      average: data.orders ? data.total / data.orders : 0,
+      subtotal: data.subtotal,
+      tax: data.tax,
+      total: data.total
+    }));
+
+    const totalOrders = rows.reduce((sum, row) => sum + row.orders, 0);
+    const totalItems = rows.reduce((sum, row) => sum + row.items, 0);
+    const subtotalSum = rows.reduce((sum, row) => sum + row.subtotal, 0);
+    const taxSum = rows.reduce((sum, row) => sum + row.tax, 0);
+    const totalSum = rows.reduce((sum, row) => sum + row.total, 0);
+
+    return {
+      title: 'Weekly sales report',
+      subtitle: `${rows.length} week(s) · ${rangeLabel}`,
+      columns: [
+        { key: 'week', label: 'Week' },
+        { key: 'orders', label: 'Orders' },
+        { key: 'items', label: 'Items sold' },
+        { key: 'average', label: 'Avg order', money: true },
+        { key: 'subtotal', label: 'Subtotal', money: true },
+        { key: 'tax', label: 'VAT / TAX', money: true },
+        { key: 'total', label: 'Total', money: true }
+      ],
+      rows,
+      totals: { orders: totalOrders, items: totalItems, subtotal: subtotalSum, tax: taxSum, total: totalSum }
+    };
+  }
+
   if (tab === 'transactions') {
     const sales = filterSalesByDate(getFromStorage(STORAGE_KEYS.sales)).filter((sale) => !sale.savedOnly);
     const daily = {};
@@ -4864,6 +5358,138 @@ function buildReport(tab) {
     };
   }
 
+  if (tab === 'profit') {
+    const menu = getFromStorage(STORAGE_KEYS.menu);
+    const rows = menu.map((item) => {
+      const price = Number(item.price) || 0;
+      const cost = getMenuItemCost(item);
+      const profit = price - cost;
+      return {
+        item: item.name,
+        category: item.category || '—',
+        price,
+        cost,
+        profit,
+        margin: price > 0 ? formatPct((profit / price) * 100) : '0.0%'
+      };
+    });
+    const totalPrice = rows.reduce((sum, row) => sum + row.price, 0);
+    const totalCost = rows.reduce((sum, row) => sum + row.cost, 0);
+    const totalProfit = totalPrice - totalCost;
+    return {
+      title: 'Menu profitability',
+      subtitle: `Recipe cost & gross margin · ${rows.length} menu item(s)`,
+      columns: [
+        { key: 'item', label: 'Menu item' },
+        { key: 'category', label: 'Category' },
+        { key: 'price', label: 'Selling price', money: true },
+        { key: 'cost', label: 'Recipe cost', money: true },
+        { key: 'profit', label: 'Gross profit', money: true },
+        { key: 'margin', label: 'Margin', cellClass: (value) => (parseFloat(value) < 0 ? 'text-danger' : '') }
+      ],
+      rows,
+      totals: { category: '', price: totalPrice, cost: totalCost, profit: totalProfit, margin: totalPrice > 0 ? formatPct((totalProfit / totalPrice) * 100) : '0.0%' }
+    };
+  }
+
+  if (tab === 'valuation') {
+    const inventory = getFromStorage(STORAGE_KEYS.inventory);
+    const rows = inventory.map((item) => ({
+      name: item.name,
+      group: item.group || '—',
+      stock: item.stock,
+      cost: getInventoryCost(item),
+      value: (Number(item.stock) || 0) * getInventoryCost(item)
+    })).filter((row) => row.stock > 0 || row.value > 0);
+    const totalValue = rows.reduce((sum, row) => sum + row.value, 0);
+    const totalUnits = rows.reduce((sum, row) => sum + row.stock, 0);
+    return {
+      title: 'Stock valuation',
+      subtitle: `Inventory value at purchase cost · ${rows.length} product(s)`,
+      columns: [
+        { key: 'name', label: 'Product' },
+        { key: 'group', label: 'Group' },
+        { key: 'stock', label: 'Stock' },
+        { key: 'cost', label: 'Unit cost', money: true },
+        { key: 'value', label: 'Stock value', money: true }
+      ],
+      rows,
+      totals: { group: '', stock: totalUnits, value: totalValue }
+    };
+  }
+
+  if (tab === 'profitloss') {
+    const sales = filterSalesByDate(getFromStorage(STORAGE_KEYS.sales)).filter((sale) => !sale.savedOnly);
+    const menu = getFromStorage(STORAGE_KEYS.menu);
+    const costById = {};
+    menu.forEach((item) => { costById[item.id] = getMenuItemCost(item); });
+
+    let revenue = 0;
+    let cogs = 0;
+    let refunds = 0;
+    sales.forEach((sale) => {
+      if (sale.refunded) {
+        refunds += sale.total;
+        return;
+      }
+      revenue += sale.total;
+      sale.items.forEach((line) => {
+        cogs += (costById[line.id] || 0) * (Number(line.qty) || 0);
+      });
+    });
+    const grossProfit = revenue - cogs;
+    const netProfit = grossProfit - refunds;
+
+    return {
+      title: 'Profit & loss',
+      subtitle: `Revenue vs cost of goods · ${rangeLabel}`,
+      columns: [
+        { key: 'line', label: 'Item' },
+        { key: 'amount', label: 'Amount', money: true }
+      ],
+      rows: [
+        { line: 'Net sales (paid invoices)', amount: revenue },
+        { line: 'Cost of goods sold (COGS)', amount: -cogs },
+        { line: 'Gross profit', amount: grossProfit },
+        { line: 'Refunds issued', amount: -refunds },
+        { line: 'Net profit', amount: netProfit }
+      ]
+    };
+  }
+
+  if (tab === 'suppliers') {
+    const purchases = getFromStorage(STORAGE_KEYS.purchases);
+    const { start, end } = getReportDateRange();
+    const filtered = purchases.filter((record) => {
+      const created = new Date(record.createdAt);
+      return created >= start && created <= end;
+    });
+    const bySupplier = {};
+    filtered.forEach((record) => {
+      const name = record.supplier || '—';
+      if (!bySupplier[name]) bySupplier[name] = { supplier: name, purchases: 0, units: 0, total: 0 };
+      bySupplier[name].purchases += 1;
+      bySupplier[name].units += record.lines.reduce((sum, line) => sum + line.qty, 0);
+      bySupplier[name].total += record.totalCost;
+    });
+    const rows = Object.values(bySupplier).sort((a, b) => b.total - a.total);
+    const totalPurchases = rows.reduce((sum, row) => sum + row.purchases, 0);
+    const totalUnits = rows.reduce((sum, row) => sum + row.units, 0);
+    const totalSpent = rows.reduce((sum, row) => sum + row.total, 0);
+    return {
+      title: 'Suppliers report',
+      subtitle: `Purchases grouped by supplier · ${rangeLabel}`,
+      columns: [
+        { key: 'supplier', label: 'Supplier' },
+        { key: 'purchases', label: 'Purchases' },
+        { key: 'units', label: 'Units' },
+        { key: 'total', label: 'Total spent', money: true }
+      ],
+      rows,
+      totals: { supplier: '', purchases: totalPurchases, units: totalUnits, total: totalSpent }
+    };
+  }
+
   if (tab === 'closings') {
     const closings = getFromStorage(STORAGE_KEYS.closings);
     const { start, end } = getReportDateRange();
@@ -4887,7 +5513,7 @@ function buildReport(tab) {
         { key: 'tax', label: 'VAT / TAX', money: true },
         { key: 'total', label: 'Expected total', money: true },
         { key: 'countTotal', label: 'Counted total', money: true },
-        { key: 'difference', label: 'Variance', money: true },
+        { key: 'difference', label: 'Variance', money: true, cellClass: (v) => (Number(v) || 0) > 0 ? 'diff-excess' : (Number(v) || 0) < 0 ? 'diff-shortage' : '' },
         { key: 'closedBy', label: 'Closed by' }
       ],
       rows: filtered.map((record) => ({
@@ -4931,6 +5557,84 @@ function buildReport(tab) {
         newPrice: record.newPrice,
         user: record.user
       }))
+    };
+  }
+
+  if (tab === 'totals') {
+    const { start, end } = getReportDateRange();
+    const sales = filterSalesByDate(getFromStorage(STORAGE_KEYS.sales)).filter((sale) => !sale.savedOnly);
+    const inventory = getFromStorage(STORAGE_KEYS.inventory);
+    const menu = getFromStorage(STORAGE_KEYS.menu);
+
+    const totalRevenue = sales.reduce((sum, sale) => sum + (Number(sale.total) || 0), 0);
+    const totalOrders = sales.length;
+    const totalItems = sales.reduce((sum, sale) => sum + sale.items.filter((item) => !item.voided).reduce((a, item) => a + item.qty, 0), 0);
+    const averageOrder = totalOrders ? totalRevenue / totalOrders : 0;
+    const totalTax = sales.reduce((sum, sale) => sum + getSaleTax(sale), 0);
+    const totalDiscount = sales.reduce((sum, sale) => sum + (Number(sale.discount) || 0), 0);
+    const totalPromo = sales.reduce((sum, sale) => sum + (Number(sale.promo) || 0), 0);
+    const totalVoided = sales.reduce((sum, sale) => sum + sale.items.filter((item) => item.voided).reduce((a, item) => a + item.qty * item.price, 0), 0);
+
+    const byMethod = {};
+    sales.forEach((sale) => (sale.payments || []).forEach((payment) => {
+      const method = payment.method || 'Other';
+      byMethod[method] = (byMethod[method] || 0) + (Number(payment.amount) || 0);
+    }));
+
+    const inRange = (key, dateField) => {
+      const records = getFromStorage(key);
+      return records.filter((record) => {
+        const created = new Date(record[dateField]);
+        return created >= start && created <= end;
+      });
+    };
+
+    const refunds = inRange(STORAGE_KEYS.refunds, 'createdAt');
+    const totalRefunds = refunds.reduce((sum, record) => sum + (Number(record.total) || 0), 0);
+    const purchases = inRange(STORAGE_KEYS.purchases, 'createdAt');
+    const totalPurchases = purchases.reduce((sum, record) => sum + (Number(record.totalCost) || 0), 0);
+    const bookOrders = inRange(STORAGE_KEYS.bookOrders, 'createdAt');
+    const bookOrderTotal = bookOrders.reduce((sum, record) => sum + (Number(record.total) || 0), 0);
+    const closings = inRange(STORAGE_KEYS.closings, 'createdAt');
+    const shifts = inRange(STORAGE_KEYS.shifts, 'date');
+    const customers = getFromStorage(STORAGE_KEYS.customers);
+    const leftovers = inRange(STORAGE_KEYS.leftovers, 'createdAt');
+    const leftoverQty = leftovers.reduce((sum, record) => sum + (Number(record.qty) || 0), 0);
+
+    const totalStockValue = inventory.reduce((sum, item) => sum + (Number(item.stock) || 0) * (Number(item.price) || 0), 0);
+    const lowStockCount = inventory.filter((item) => Number(item.stock) <= Number(item.reorderLevel)).length;
+
+    const rows = [
+      { metric: 'Total revenue', value: formatCurrency(totalRevenue) },
+      { metric: 'Total sales (orders)', value: String(totalOrders) },
+      { metric: 'Items sold', value: totalItems.toLocaleString() },
+      { metric: 'Average order value', value: formatCurrency(averageOrder) },
+      { metric: 'Total VAT / TAX collected', value: formatCurrency(totalTax) },
+      { metric: 'Total discounts given', value: formatCurrency(totalDiscount) },
+      { metric: 'Total promos applied', value: formatCurrency(totalPromo) },
+      { metric: 'Total voided amount', value: formatCurrency(totalVoided) },
+      ...Object.entries(byMethod).sort((a, b) => b[1] - a[1]).map(([method, amount]) => ({ metric: `Total ${method}`, value: formatCurrency(amount) })),
+      { metric: 'Total refunds', value: formatCurrency(totalRefunds) },
+      { metric: 'Total supplier purchases', value: formatCurrency(totalPurchases) },
+      { metric: 'Total stock value', value: formatCurrency(totalStockValue) },
+      { metric: 'Low stock items', value: String(lowStockCount) },
+      { metric: 'Products on menu', value: String(menu.length) },
+      { metric: 'Total book orders', value: String(bookOrders.length) },
+      { metric: 'Book orders value', value: formatCurrency(bookOrderTotal) },
+      { metric: 'Total customers', value: String(customers.length) },
+      { metric: 'Total days closed', value: String(closings.length) },
+      { metric: 'Total shifts', value: String(shifts.length) },
+      { metric: 'Leftover quantity', value: leftoverQty.toLocaleString() }
+    ];
+
+    return {
+      title: 'Total analysis',
+      subtitle: `Comprehensive totals · ${rangeLabel}`,
+      columns: [
+        { key: 'metric', label: 'Metric' },
+        { key: 'value', label: 'Total' }
+      ],
+      rows
     };
   }
 
@@ -4995,16 +5699,24 @@ function buildReport(tab) {
 
     const methodSet = new Set();
     filtered.forEach((shift) => {
+      const assignedCashier = shift.cashierName || shift.cashier;
       allSales.forEach((sale) => {
-        if (matchesShift(sale, shift)) {
-          (sale.payments || []).forEach((payment) => methodSet.add(payment.method || 'Other'));
-        }
+        if (!matchesShift(sale, shift)) return;
+        if (assignedCashier && (sale.cashier || '').toLowerCase() !== assignedCashier.toLowerCase()) return;
+        (sale.payments || []).forEach((payment) => methodSet.add(payment.method || 'Other'));
       });
     });
     const paymentMethods = Array.from(methodSet);
 
     const rows = filtered.map((shift) => {
-      const shiftSales = allSales.filter((sale) => matchesShift(sale, shift));
+      const assignedCashier = shift.cashierName || shift.cashier;
+      const shiftSales = allSales.filter((sale) => {
+        if (!matchesShift(sale, shift)) return false;
+        if (assignedCashier) {
+          return (sale.cashier || '').toLowerCase() === assignedCashier.toLowerCase();
+        }
+        return true;
+      });
       const payByMethod = {};
       shiftSales.forEach((sale) => {
         (sale.payments || []).forEach((payment) => {
@@ -5414,6 +6126,35 @@ function buildReport(tab) {
     };
   }
 
+  if (tab === 'systems') {
+    const sales = filterSalesByDate(getFromStorage(STORAGE_KEYS.sales)).filter((sale) => !sale.savedOnly && sale.system);
+    const bySystem = {};
+    sales.forEach((sale) => {
+      if (!bySystem[sale.system]) bySystem[sale.system] = { system: sale.system, orders: 0, items: 0, total: 0 };
+      bySystem[sale.system].orders += 1;
+      bySystem[sale.system].items += sale.items.reduce((sum, item) => sum + item.qty, 0);
+      bySystem[sale.system].total += sale.total;
+    });
+    const rows = Object.values(bySystem).sort((a, b) => b.total - a.total);
+    return {
+      title: 'System sales report',
+      subtitle: `${rows.length} system(s) · ${rangeLabel}`,
+      columns: [
+        { key: 'system', label: 'System' },
+        { key: 'orders', label: 'Orders' },
+        { key: 'items', label: 'Items' },
+        { key: 'total', label: 'Revenue', money: true }
+      ],
+      rows,
+      totalsLabel: 'Totals',
+      totals: {
+        orders: rows.reduce((sum, row) => sum + row.orders, 0),
+        items: rows.reduce((sum, row) => sum + row.items, 0),
+        total: rows.reduce((sum, row) => sum + row.total, 0)
+      }
+    };
+  }
+
   if (tab === 'receipts') {
     const audit = getFromStorage(STORAGE_KEYS.audit);
     const { start, end } = getReportDateRange();
@@ -5473,10 +6214,13 @@ function buildReport(tab) {
         { key: 'category', label: 'Category' },
         { key: 'customer', label: 'Customer' },
         { key: 'phone', label: 'Phone' },
-        { key: 'total', label: 'Total', money: true },
         { key: 'partPayment', label: 'Part payment', money: true },
-        { key: 'balance', label: 'Balance due', money: true },
-        { key: 'status', label: 'Status' }
+        { key: 'partBank', label: 'Part pay method' },
+        { key: 'fullPayment', label: 'Full payment', money: true },
+        { key: 'payMethod', label: 'Payment method' },
+        { key: 'balance', label: 'Balance due' },
+        { key: 'total', label: 'Total', money: true },
+        { key: 'status', label: 'Status', cellClass: (v) => v === 'Pending' ? 'pending-red' : '' }
       ],
       rows: filtered.map((order) => ({
         date: new Date(order.createdAt).toLocaleString(),
@@ -5487,7 +6231,10 @@ function buildReport(tab) {
         phone: order.phone || '—',
         total: Number(order.total) || 0,
         partPayment: Number(order.partPayment) || 0,
-        balance: Number(order.balance) || 0,
+        partBank: order.partBank === 'None' ? '-' : (order.partBank || ((order.paymentMethod || Number(order.fullPayment) > 0) ? '-' : '')),
+        fullPayment: Number(order.fullPayment) || (order.paymentMethod ? (Number(order.partPayment) || 0) : 0),
+        payMethod: ((order.collectedBank || order.paymentMethod) === 'None' ? '-' : (order.collectedBank || order.paymentMethod)) || '',
+        balance: order.status === 'collected' ? `Full pay (${formatCurrency(Number(order.balance) || 0)})` : (Number(order.balance) || 0),
         status: order.status === 'collected' ? 'Collected' : 'Pending'
       })),
       totals: { count: filtered.length, total: totalSum, partPayment: partSum, balance: balanceSum }
@@ -5540,7 +6287,7 @@ function renderReports() {
             <tr>
               ${def.columns.map((column) => {
                 const value = row[column.key];
-                return `<td class="${column.money ? 'num' : ''}">${column.money ? formatCurrency(value) : (value ?? '—')}</td>`;
+                return `<td class="${column.money ? 'num' : ''}${column.cellClass ? ' ' + column.cellClass(value) : ''}">${column.money ? formatCurrency(value) : (value ?? '—')}</td>`;
               }).join('')}
             </tr>
           `).join('')
@@ -5777,7 +6524,7 @@ function confirmRefund() {
   const errorEl = document.getElementById('refund-error');
   if (!entered) { errorEl.textContent = 'Enter the admin password.'; return; }
   const users = getFromStorage(STORAGE_KEYS.users);
-  const authorized = users.some((user) => user.role === 'admin' && user.password === entered)
+  const authorized = users.some((user) => ['superadmin', 'admin'].includes(user.role) && user.password === entered)
     || (currentUser && currentUser.password === entered);
   if (!authorized) {
     errorEl.textContent = 'Incorrect admin password.';
@@ -5802,7 +6549,7 @@ function refundSale(saleId) {
   const inventory = getFromStorage(STORAGE_KEYS.inventory);
   (sale.items || []).forEach((item) => {
     if (item.voided) return;
-    const row = inventory.find((entry) => entry.name.toLowerCase() === item.name.toLowerCase());
+    const row = findInventoryRowForBranch(inventory, item.name, sale.branch);
     if (row) row.stock += item.qty;
   });
   writeToStorage(STORAGE_KEYS.inventory, inventory);
@@ -5860,11 +6607,41 @@ function openClosingModal() {
         <strong>${method}</strong>
         <span>Expected ${formatCurrency(byMethod[method] || 0)}</span>
       </div>
-      <input type="number" min="0" step="0.01" placeholder="Counted amount" class="closing-count" data-method="${method}" />
+      <input type="number" min="0" step="0.01" placeholder="Counted amount" class="closing-count" data-method="${method}" oninput="updateClosingDifference()" />
     </div>
   `).join('');
   document.getElementById('closing-error').textContent = '';
+  updateClosingDifference();
   document.getElementById('closing-modal').classList.remove('hidden');
+}
+
+function updateClosingDifference() {
+  const { total } = getClosingTotals();
+  let counted = 0;
+  document.querySelectorAll('#closing-methods .closing-count').forEach((input) => {
+    counted += Number(input.value) || 0;
+  });
+  const countedEl = document.getElementById('closing-counted');
+  const diffEl = document.getElementById('closing-diff');
+  const diffLabel = document.getElementById('closing-diff-label');
+  const diffRow = document.getElementById('closing-diff-row');
+  if (countedEl) countedEl.textContent = formatCurrency(counted);
+  const diff = counted - total;
+  if (diffEl && diffLabel && diffRow) {
+    diffEl.textContent = diff === 0 ? formatCurrency(0) : (diff > 0 ? '+' : '-') + formatCurrency(Math.abs(diff));
+    if (diff > 0) {
+      diffLabel.textContent = 'Excess';
+      diffRow.classList.remove('shortage');
+      diffRow.classList.add('excess');
+    } else if (diff < 0) {
+      diffLabel.textContent = 'Shortage';
+      diffRow.classList.remove('excess');
+      diffRow.classList.add('shortage');
+    } else {
+      diffLabel.textContent = 'Difference';
+      diffRow.classList.remove('shortage', 'excess');
+    }
+  }
 }
 
 function closeClosingModal() {
@@ -5930,6 +6707,7 @@ function openPurchaseModal() {
   document.getElementById('purchase-supplier').value = '';
   document.getElementById('purchase-note').value = '';
   document.getElementById('purchase-error').textContent = '';
+  refreshSuppliersDatalist();
   renderPurchaseItems();
   document.getElementById('purchase-modal').classList.remove('hidden');
 }
@@ -5952,10 +6730,11 @@ function renderPurchaseItems() {
 }
 
 function savePurchase() {
-  const supplier = document.getElementById('purchase-supplier').value.trim();
+  const supplierName = document.getElementById('purchase-supplier').value.trim();
   const note = document.getElementById('purchase-note').value.trim();
   const errorEl = document.getElementById('purchase-error');
-  if (!supplier) { errorEl.textContent = 'Enter a supplier name.'; return; }
+  if (!supplierName) { errorEl.textContent = 'Enter a supplier name.'; return; }
+  const supplier = registerSupplier(supplierName);
 
   const lines = [];
   document.querySelectorAll('#purchase-items .purchase-qty').forEach((input) => {
@@ -5973,7 +6752,8 @@ function savePurchase() {
   const purchases = getFromStorage(STORAGE_KEYS.purchases);
   purchases.push({
     id: Date.now(),
-    supplier,
+    supplier: supplier ? supplier.name : supplierName,
+    supplierId: supplier ? supplier.id : null,
     note,
     lines,
     totalCost,
@@ -5991,14 +6771,14 @@ function savePurchase() {
     }
   });
   writeToStorage(STORAGE_KEYS.inventory, inventory);
-  lines.forEach((line) => logStockIn(line.name, line.qty, `Purchase from ${supplier}`));
+  lines.forEach((line) => logStockIn(line.name, line.qty, `Purchase from ${supplier ? supplier.name : supplierName}`));
 
   document.getElementById('purchase-modal').classList.add('hidden');
   renderInventoryManager();
   renderDashboard();
   renderPOS();
-  showToast(`Purchase from ${supplier} recorded · ${formatCurrency(totalCost)}`, 'success');
-  logAudit('Purchase recorded', `${supplier} · ${lines.length} product line(s) · ${formatCurrency(totalCost)}`);
+  showToast(`Purchase from ${supplier ? supplier.name : supplierName} recorded · ${formatCurrency(totalCost)}`, 'success');
+  logAudit('Purchase recorded', `${supplier ? supplier.name : supplierName} · ${lines.length} product line(s) · ${formatCurrency(totalCost)}`);
 }
 
 function renderPurchaseList() {
@@ -6021,51 +6801,95 @@ function renderPurchaseList() {
     : '<div class="list-row"><div>No purchases yet.</div><span class="badge info">New</span></div>';
 }
 
-function printBarcodeLabels() {
-  const ids = getMarkedInventoryIds();
-  const inventory = getFromStorage(STORAGE_KEYS.inventory);
-  const items = ids.length ? inventory.filter((item) => ids.includes(item.id)) : inventory;
-  printLabels(items);
+function getSuppliers() {
+  return getFromStorage(STORAGE_KEYS.suppliers);
 }
 
-function printItemLabel(id) {
-  const item = getFromStorage(STORAGE_KEYS.inventory).find((entry) => entry.id === id);
-  if (item) printLabels([item]);
+function writeSuppliers(suppliers) {
+  writeToStorage(STORAGE_KEYS.suppliers, suppliers);
 }
 
-function printLabels(items) {
-  if (!items.length) { showToast('No items to print.', 'error'); return; }
-  const settings = getStoredSettings();
-  const shopName = settings.shopName || 'FasterFood';
-  const printWindow = window.open('', '_blank', 'width=400,height=600');
-  if (!printWindow) { showToast('Pop-up blocked. Allow pop-ups to print labels.', 'error'); return; }
-  const labels = items.map((item) => `
-    <div class="label">
-      <div class="label-brand">${escapeHtml(shopName)}</div>
-      <div class="label-name">${escapeHtml(item.name)}</div>
-      <div class="label-barcode">${escapeHtml(item.barcode || item.id)}</div>
-      <div class="label-price">${item.price ? formatCurrency(item.price) : ''}</div>
-    </div>
-  `).join('');
-  printWindow.document.write(`
-    <!DOCTYPE html>
-    <html><head><meta charset="UTF-8" /><title>Barcode labels</title>
-    <style>
-      body { font-family: 'Courier New', monospace; margin: 10px; }
-      .label { width: 45mm; min-height: 24mm; border: 1px dashed #999; padding: 4px 6px; margin: 4px; display: inline-block; text-align: center; font-size: 11px; }
-      .label-brand { font-weight: 800; letter-spacing: 1px; }
-      .label-name { font-weight: 700; margin-top: 2px; }
-      .label-barcode { letter-spacing: 2px; margin-top: 3px; font-size: 10px; }
-      .label-price { font-weight: 800; margin-top: 3px; font-size: 12px; }
-      @media print { .label { border: none; } }
-    </style></head>
-    <body>${labels}
-    <script>window.onload = function(){ window.focus(); window.print(); };<\/script>
-    </body></html>
-  `);
-  printWindow.document.close();
-  printWindow.focus();
-  logAudit('Labels printed', `${items.length} label(s)`);
+function refreshSuppliersDatalist() {
+  const datalist = document.getElementById('suppliers-datalist');
+  if (!datalist) return;
+  datalist.innerHTML = getSuppliers().map((supplier) => `<option value="${escapeHtml(supplier.name)}"></option>`).join('');
+}
+
+function renderSuppliers() {
+  const container = document.getElementById('suppliers-list');
+  if (!container) return;
+  const suppliers = getSuppliers().slice().sort((a, b) => String(a.name).localeCompare(String(b.name)));
+  container.innerHTML = suppliers.length
+    ? suppliers.map((supplier) => `
+      <div class="list-row">
+        <div class="mini-item">
+          <span class="mini-avatar">${escapeHtml(String(supplier.name).charAt(0).toUpperCase())}</span>
+          <div>
+            <div>${escapeHtml(supplier.name)}</div>
+            <small>${[supplier.phone, supplier.email, supplier.address].filter(Boolean).join(' · ') || 'No contact details'}</small>
+          </div>
+        </div>
+        <button class="action-btn danger" style="flex:0 0 auto;padding:6px 10px;" onclick="deleteSupplier(${supplier.id})" title="Remove supplier">×</button>
+      </div>
+    `).join('')
+    : '<div class="list-row"><div>No suppliers yet. Add one above.</div><span class="badge info">New</span></div>';
+}
+
+function openSuppliersModal() {
+  renderSuppliers();
+  document.getElementById('suppliers-modal').classList.remove('hidden');
+}
+
+function closeSuppliersModal() {
+  document.getElementById('suppliers-modal').classList.add('hidden');
+}
+
+function registerSupplier(name) {
+  const clean = String(name || '').trim();
+  if (!clean) return null;
+  const suppliers = getSuppliers();
+  const existing = suppliers.find((s) => String(s.name).toLowerCase() === clean.toLowerCase());
+  if (existing) return existing;
+  const supplier = { id: Date.now(), name: clean, phone: '', email: '', address: '', createdAt: new Date().toISOString() };
+  suppliers.push(supplier);
+  writeSuppliers(suppliers);
+  refreshSuppliersDatalist();
+  logAudit('Supplier added', clean);
+  return supplier;
+}
+
+function addSupplier() {
+  const name = document.getElementById('supplier-name').value.trim();
+  const phone = document.getElementById('supplier-phone').value.trim();
+  const email = document.getElementById('supplier-email').value.trim();
+  const address = document.getElementById('supplier-address').value.trim();
+  if (!name) { showToast('Enter a supplier name.', 'error'); return; }
+  const suppliers = getSuppliers();
+  if (suppliers.some((s) => String(s.name).toLowerCase() === name.toLowerCase())) {
+    showToast('That supplier already exists.', 'error');
+    return;
+  }
+  suppliers.push({ id: Date.now(), name, phone, email, address, createdAt: new Date().toISOString() });
+  writeSuppliers(suppliers);
+  document.getElementById('supplier-name').value = '';
+  document.getElementById('supplier-phone').value = '';
+  document.getElementById('supplier-email').value = '';
+  document.getElementById('supplier-address').value = '';
+  refreshSuppliersDatalist();
+  renderSuppliers();
+  logAudit('Supplier added', name);
+  showToast(`Supplier "${name}" added.`, 'success');
+}
+
+function deleteSupplier(id) {
+  const suppliers = getSuppliers();
+  const target = suppliers.find((s) => s.id === Number(id));
+  if (!target) return;
+  if (!confirm(`Remove supplier "${target.name}"? Purchases already recorded are kept.`)) return;
+  writeSuppliers(suppliers.filter((s) => s.id !== Number(id)));
+  renderSuppliers();
+  refreshSuppliersDatalist();
+  logAudit('Supplier removed', target.name);
 }
 
 function downloadAccountingExport() {
@@ -6076,6 +6900,7 @@ function downloadAccountingExport() {
       'Date': new Date(sale.createdAt).toISOString(),
       'Invoice': sale.invoice,
       'Cashier': sale.cashier || '',
+      'System': sale.system || '',
       'Items': sale.items.reduce((sum, item) => sum + item.qty, 0),
       'Subtotal': sale.rawSubtotal ?? (Number.isFinite(sale.subtotal) ? sale.subtotal : sale.total - getSaleTax(sale)),
       'Promo': sale.promo ? (Number(sale.promo.amount) || 0) : 0,
@@ -6430,39 +7255,51 @@ function renderSettings() {
   renderPurchaseList();
   renderFeatureConfig();
   syncSettingsHero();
+  renderHardwareSettings();
+  const terminalSystemInput = document.getElementById('terminal-system-input');
+  if (terminalSystemInput) terminalSystemInput.value = getTerminalSystemLabel();
+  const ipEl = document.getElementById('terminal-ip-display');
+  if (ipEl) ipEl.textContent = formatTerminalIdentity();
 }
 
-function openSettingsAuth() {
-  document.getElementById('settings-auth-error').textContent = '';
-  document.getElementById('settings-auth-password').value = '';
-  document.getElementById('settings-auth-modal').classList.remove('hidden');
-  document.getElementById('settings-auth-password').focus();
+function formatTerminalIdentity() {
+  const ip = getTerminalIp();
+  const system = getTerminalSystemLabel();
+  if (ip) return `This machine: ${system} · IP ${ip} · server ${location.hostname}:${location.port || '5501'}`;
+  return 'Detecting this machine\u2019s IP…';
 }
 
-function closeSettingsAuth() {
-  document.getElementById('settings-auth-modal').classList.add('hidden');
+function setSystemPreset(name) {
+  const input = document.getElementById('terminal-system-input');
+  if (input) input.value = name;
+  setTerminalSystem(name);
+  markTerminalNamed();
+  const systemEl = document.getElementById('user-system');
+  if (systemEl) systemEl.textContent = getTerminalSystemLabel();
+  const ipEl = document.getElementById('terminal-ip-display');
+  if (ipEl) ipEl.textContent = formatTerminalIdentity();
+  showToast(`This terminal is now "${name}".`, 'success');
+  logAudit('Terminal system set', `This terminal set to system "${name}"`);
+  sendHeartbeat();
 }
 
-function confirmSettingsAuth() {
-  const entered = document.getElementById('settings-auth-password').value.trim();
-  const errorEl = document.getElementById('settings-auth-error');
-  if (!entered) {
-    errorEl.textContent = 'Enter your password to access settings.';
+function saveTerminalSystem() {
+  const input = document.getElementById('terminal-system-input');
+  if (!input) return;
+  const name = input.value.trim();
+  if (!name) {
+    showToast('Enter a system name first.', 'error');
     return;
   }
-  if (!currentUser) {
-    errorEl.textContent = 'You must be signed in to access settings.';
-    return;
-  }
-  if (currentUser.password !== entered) {
-    errorEl.textContent = 'Incorrect password.';
-    logAudit('Settings blocked', 'Incorrect password entered by ' + currentUser.name);
-    return;
-  }
-  settingsUnlocked = true;
-  document.getElementById('settings-auth-modal').classList.add('hidden');
-  logAudit('Settings opened', `Settings unlocked by ${currentUser.name}`);
-  showPanel('settings');
+  setTerminalSystem(name);
+  markTerminalNamed();
+  const systemEl = document.getElementById('user-system');
+  if (systemEl) systemEl.textContent = getTerminalSystemLabel();
+  const ipEl = document.getElementById('terminal-ip-display');
+  if (ipEl) ipEl.textContent = formatTerminalIdentity();
+  showToast(`This terminal is now "${name}".`, 'success');
+  logAudit('Terminal system set', `This terminal set to system "${name}"`);
+  sendHeartbeat();
 }
 
 function renderQrPreview() {
@@ -6520,43 +7357,7 @@ function getTodayShifts() {
   return getFromStorage(STORAGE_KEYS.shifts).filter((shift) => shift.date === todayKey());
 }
 
-function requestShiftAccess() {
-  if (!currentUser) {
-    showToast('You must be signed in to access shifts.', 'error');
-    return;
-  }
-  document.getElementById('shift-auth-error').textContent = '';
-  document.getElementById('shift-auth-password').value = '';
-  document.getElementById('shift-auth-modal').classList.remove('hidden');
-  document.getElementById('shift-auth-password').focus();
-}
-
-function closeShiftAuth() {
-  document.getElementById('shift-auth-modal').classList.add('hidden');
-}
-
-function confirmShiftAuth() {
-  const entered = document.getElementById('shift-auth-password').value.trim();
-  const errorEl = document.getElementById('shift-auth-error');
-  if (!entered) {
-    errorEl.textContent = 'Enter your password to access shifts.';
-    return;
-  }
-  if (!currentUser) {
-    errorEl.textContent = 'You must be signed in to access shifts.';
-    return;
-  }
-  if (currentUser.password !== entered) {
-    errorEl.textContent = 'Incorrect password.';
-    logAudit('Shifts blocked', 'Incorrect password entered by ' + currentUser.name);
-    return;
-  }
-  document.getElementById('shift-auth-modal').classList.add('hidden');
-  logAudit('Shifts opened', `Shifts unlocked by ${currentUser.name}`);
-  openShiftManager();
-}
-
-function openShiftManager() {
+function renderShiftManager() {
   const shifts = getTodayShifts();
   const morning = shifts.find((shift) => shift.name === 'Morning');
   const afternoon = shifts.find((shift) => shift.name === 'Afternoon');
@@ -6566,14 +7367,9 @@ function openShiftManager() {
   document.getElementById('shift-afternoon-end').value = afternoon ? afternoon.endTime : '22:00';
   const morningToggle = document.getElementById('shift-morning-enabled');
   const afternoonToggle = document.getElementById('shift-afternoon-enabled');
-  if (morningToggle) morningToggle.checked = !!morning;
-  if (afternoonToggle) afternoonToggle.checked = !!afternoon;
+  if (morningToggle) morningToggle.checked = true;
+  if (afternoonToggle) afternoonToggle.checked = true;
   renderTodayShifts();
-  document.getElementById('shift-modal').classList.remove('hidden');
-}
-
-function closeShiftModal() {
-  document.getElementById('shift-modal').classList.add('hidden');
 }
 
 function saveTodayShifts() {
@@ -6627,7 +7423,7 @@ function renderTodayShifts() {
           : shift.status === 'ended'
             ? '<span class="badge info">Ended</span>'
             : '<span class="badge safe">Open</span>';
-        const endBtn = shift.status === 'started'
+        const endBtn = shift.status === 'started' || shift.status === 'open'
           ? `<button class="shift-end-btn" onclick="endShift(${shift.id})">End shift</button>`
           : '';
         const sub = shift.status === 'started'
@@ -6683,7 +7479,35 @@ function startShift(shiftId) {
 
 function renderShiftGate() {
   const gate = document.getElementById('shift-gate');
-  if (gate) gate.classList.add('hidden');
+  if (!gate) return;
+  if (!currentUser || currentUser.role !== 'cashier') {
+    gate.classList.add('hidden');
+    return;
+  }
+  const today = getTodayShifts();
+  const alreadyStarted = today.some((shift) => shift.cashier === currentUser.username && shift.status === 'started');
+  if (alreadyStarted) {
+    gate.classList.add('hidden');
+    return;
+  }
+  const open = today.filter((shift) => shift.status === 'open');
+  if (!open.length) {
+    gate.classList.add('hidden');
+    return;
+  }
+  const list = document.getElementById('shift-gate-list');
+  if (list) {
+    list.innerHTML = open.map((shift) => `
+      <div class="shift-gate-item">
+        <div>
+          <strong>${shift.name} shift</strong>
+          <small>${shift.startTime} – ${shift.endTime}</small>
+        </div>
+        <button class="action-btn primary" onclick="startShift(${shift.id})">Start</button>
+      </div>
+    `).join('');
+  }
+  gate.classList.remove('hidden');
 }
 
 function getMinutesUntilShiftEnd(shift) {
@@ -6693,28 +7517,11 @@ function getMinutesUntilShiftEnd(shift) {
   return (end - new Date()) / 60000;
 }
 
-function autoEndShift(shift) {
-  const all = getFromStorage(STORAGE_KEYS.shifts);
-  const stored = all.find((entry) => entry.id === shift.id);
-  if (!stored || stored.status === 'ended') return;
-  stored.status = 'ended';
-  stored.endedAt = new Date().toISOString();
-  writeToStorage(STORAGE_KEYS.shifts, all);
-  renderTodayShifts();
-  renderShiftGate();
-  showToast(`${stored.name} shift ended.`, 'info', 3000);
-  logAudit('Shift auto-ended', `${stored.name} shift ended by schedule`);
-}
-
 function checkShiftTimers() {
   if (!currentUser) return;
   const started = getTodayShifts().filter((shift) => shift.status === 'started');
   started.forEach((shift) => {
     const minsLeft = getMinutesUntilShiftEnd(shift);
-    if (minsLeft <= 0) {
-      autoEndShift(shift);
-      return;
-    }
     if (currentUser.role === 'cashier' && shift.cashier === currentUser.username) {
       if (minsLeft <= 5 && !shiftNotified5[shift.id]) {
         shiftNotified5[shift.id] = true;
@@ -6735,7 +7542,7 @@ function checkCashierShiftEnded() {
   const ended = getTodayShifts().find((shift) => shift.cashier === currentUser.username && shift.status === 'ended');
   if (ended && !shiftNotified5['signed-out-' + ended.id]) {
     shiftNotified5['signed-out-' + ended.id] = true;
-    showToast(`${ended.name} shift ended. You can continue using the POS.`, 'info', 3000);
+    showToast(`${ended.name} shift ended.`, 'info', 3000);
   }
 }
 
@@ -6793,6 +7600,37 @@ function getFeatures() {
   return { ...defaultSettings.features, ...(settings.features || {}) };
 }
 
+const HARDWARE_DEFS = [
+  { key: 'touch', title: 'Touch screen', icon: '👆', description: 'Enlarge buttons and controls for finger-friendly operation on touch screens.' },
+  { key: 'barcode', title: 'Barcode reader / scanner', icon: '🔲', description: 'Show a barcode field on the POS and capture quick scans straight into the cart.' },
+  { key: 'printer', title: 'POS receipt printer', icon: '🖨️', description: 'Automatically print a receipt after every completed sale.' },
+  { key: 'cashDrawer', title: 'Cash drawer', icon: '💰', description: 'Auto-open the cash drawer after a cash payment and open it on demand.' },
+  { key: 'scale', title: 'Electronic scale', icon: '⚖️', description: 'Show a weight input to add weighed items from a connected scale at checkout.' },
+  { key: 'cardReader', title: 'Credit / debit card reader', icon: '💳', description: 'Take card payments through a terminal reader or a manual approval code.' },
+  { key: 'clientDisplay', title: 'Client display', icon: '🖥️', description: 'Show a customer-facing screen with the current order and total.' }
+];
+
+function getHardwareSettings() {
+  const settings = getStoredSettings();
+  return { ...defaultSettings.hardware, ...(settings.hardware || {}) };
+}
+
+function getHardware(key) {
+  return !!getHardwareSettings()[key];
+}
+
+function getHardwareTitle(key) {
+  const def = HARDWARE_DEFS.find((entry) => entry.key === key);
+  return def ? def.title : key;
+}
+
+function setHardware(key, value) {
+  const settings = getStoredSettings();
+  settings.hardware = { ...defaultSettings.hardware, ...(settings.hardware || {}), [key]: !!value };
+  writeToStorage(STORAGE_KEYS.settings, settings);
+  logAudit('Hardware setting', `${getHardwareTitle(key)} ${value ? 'enabled' : 'disabled'} by ${currentUser ? currentUser.name : 'user'}`);
+}
+
 function getFeature(key) {
   return !!getFeatures()[key];
 }
@@ -6823,6 +7661,7 @@ function refreshFeatureUI() {
   renderCartOrderBadge();
   renderFeatureConfig();
   renderReportTabs();
+  applyHardwareUI();
   if (currentUser && document.getElementById('settings-panel') && document.getElementById('settings-panel').classList.contains('active')) {
     renderSettings();
   }
@@ -6832,7 +7671,7 @@ function refreshFeatureUI() {
 }
 
 function openFullPackage() {
-  if (!currentUser || currentUser.role !== 'admin') {
+  if (!currentUser || !['superadmin', 'admin'].includes(currentUser.role)) {
     showToast('Only the Owner can manage Full Package features.', 'error');
     return;
   }
@@ -6904,6 +7743,275 @@ function toggleFeature(key, value) {
   showToast(`${getFeatureTitle(key)} ${value ? 'activated' : 'deactivated'}`, value ? 'success' : 'info');
 }
 
+function renderHardwareSettings() {
+  const container = document.getElementById('hardware-list');
+  if (!container) return;
+  const hw = getHardwareSettings();
+  const count = HARDWARE_DEFS.filter((def) => hw[def.key]).length;
+  container.innerHTML = `
+    <div class="fp-count-line">${count} / ${HARDWARE_DEFS.length} hardware enabled</div>
+    ${HARDWARE_DEFS.map((def) => `
+      <div class="fp-row ${hw[def.key] ? 'fp-on' : ''}">
+        <div class="fp-icon">${def.icon}</div>
+        <div class="fp-info">
+          <strong>${def.title}</strong>
+          <small>${def.description}</small>
+        </div>
+        <label class="toggle-row fp-toggle">
+          <input type="checkbox" data-hardware="${def.key}" ${hw[def.key] ? 'checked' : ''} onchange="toggleHardware('${def.key}', this.checked)" />
+          <span class="toggle-box"></span>
+          <span class="fp-status">${hw[def.key] ? 'On' : 'Off'}</span>
+        </label>
+      </div>
+    `).join('')}
+  `;
+}
+
+function toggleHardware(key, value) {
+  if (currentUser && !['superadmin', 'admin'].includes(currentUser.role)) {
+    showToast('Only the Owner can change hardware settings.', 'error');
+    renderHardwareSettings();
+    return;
+  }
+  setHardware(key, value);
+  renderHardwareSettings();
+  applyHardwareUI();
+  showToast(`${getHardwareTitle(key)} ${value ? 'enabled' : 'disabled'}`, value ? 'success' : 'info');
+}
+
+function applyHardwareUI() {
+  const hw = getHardwareSettings();
+  document.body.classList.toggle('hw-touch', hw.touch);
+  const clientDisplayBtn = document.getElementById('client-display-btn');
+  if (clientDisplayBtn) clientDisplayBtn.classList.toggle('hidden', !hw.clientDisplay);
+  const scaleSection = document.getElementById('scale-section');
+  if (scaleSection) scaleSection.classList.toggle('hidden', !hw.scale);
+  const cardSection = document.getElementById('card-reader-section');
+  if (cardSection) cardSection.classList.toggle('hidden', !hw.cardReader);
+  syncBarcodeInput();
+  renderHardwareSettings();
+}
+
+function syncBarcodeInput() {
+  const head = document.querySelector('.menu-area-head');
+  if (!head) return;
+  const existing = document.getElementById('barcode-input');
+  const enabled = getHardware('barcode');
+  if (enabled && !existing) {
+    const wrap = document.createElement('div');
+    wrap.className = 'barcode-input-wrap';
+    wrap.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6V4h2M10 4h2M18 4h2v2M20 10v2M20 16v2h-2M14 20h-2M6 20H4v-2"/><path d="M7 9v6M10 9v6M13 9v6M16 9v6"/></svg>
+      <input id="barcode-input" type="text" placeholder="Scan barcode..." autocomplete="off" />
+      <button type="button" class="barcode-cam-btn" onclick="openCameraScan()" title="Scan with camera" aria-label="Scan with camera">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      </button>
+    `;
+    const searchBox = head.querySelector('.menu-search-box');
+    head.insertBefore(wrap, searchBox.nextSibling);
+    const input = document.getElementById('barcode-input');
+    if (input) {
+      input.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          handleBarcodeEntry();
+        }
+      });
+      input.addEventListener('input', () => {
+        if (input.value.length >= 6) handleBarcodeEntry();
+      });
+    }
+  } else if (!enabled && existing) {
+    const wrapEl = existing.closest('.barcode-input-wrap');
+    if (wrapEl) wrapEl.remove();
+  }
+}
+
+function getClientDisplayData() {
+  const items = cart.map((item) => ({
+    name: item.name,
+    qty: item.qty,
+    total: ((Number(item.price) || 0) + (Number(item.optionsPrice) || 0)) * item.qty
+  }));
+  const settings = getStoredSettings();
+  return {
+    shop: (settings && settings.shopName) || 'FasterFood',
+    items,
+    total: getCurrentTotal(),
+    count: cart.reduce((sum, item) => sum + item.qty, 0)
+  };
+}
+
+let clientDisplayWindow = null;
+let clientDisplayTimer = null;
+
+function openClientDisplay() {
+  if (clientDisplayWindow && !clientDisplayWindow.closed) {
+    clientDisplayWindow.focus();
+    return;
+  }
+  const win = window.open('', '_blank', 'width=520,height=700');
+  if (!win) {
+    showToast('Pop-up blocked. Please allow pop-ups to open the client display.', 'error');
+    return;
+  }
+  clientDisplayWindow = win;
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Client Display</title><style>
+    body { margin:0; font-family:'Segoe UI',Arial,sans-serif; background:#0f172a; color:#fff; height:100vh; display:flex; flex-direction:column; }
+    .hd { background:#b91c1c; padding:18px 22px; font-size:20px; font-weight:800; letter-spacing:.5px; }
+    .cart { flex:1; padding:18px 22px; overflow:auto; }
+    .row { display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px dashed #334155; font-size:17px; }
+    .row .qty { color:#fbbf24; font-weight:700; margin:0 10px; }
+    .empty { text-align:center; color:#94a3b8; margin-top:60px; font-size:18px; }
+    .ft { background:#0b1120; padding:20px 22px; border-top:2px solid #b91c1c; display:flex; justify-content:space-between; align-items:center; }
+    .ft .label { font-size:15px; color:#94a3b8; text-transform:uppercase; letter-spacing:1px; }
+    .ft .total { font-size:34px; font-weight:800; color:#fbbf24; }
+    .ft .count { font-size:13px; color:#64748b; }
+  </style></head><body>
+    <div class="hd" id="cd-shop">FasterFood</div>
+    <div class="cart" id="cd-cart"></div>
+    <div class="ft">
+      <div><div class="label">Total</div><div class="total" id="cd-total">₦0</div></div>
+      <div class="count" id="cd-count">0 items</div>
+    </div>
+  </body></html>`);
+  win.document.close();
+  const refresh = () => {
+    if (!clientDisplayWindow || clientDisplayWindow.closed) {
+      if (clientDisplayTimer) { clearInterval(clientDisplayTimer); clientDisplayTimer = null; }
+      clientDisplayWindow = null;
+      return;
+    }
+    const data = getClientDisplayData();
+    const doc = clientDisplayWindow.document;
+    doc.getElementById('cd-shop').textContent = data.shop;
+    doc.getElementById('cd-total').textContent = formatCurrency(data.total);
+    doc.getElementById('cd-count').textContent = `${data.count} item(s)`;
+    doc.getElementById('cd-cart').innerHTML = data.items.length
+      ? data.items.map((item) => `
+          <div class="row">
+            <span>${escapeHtml(item.name)}</span>
+            <span><span class="qty">×${item.qty}</span> ${formatCurrency(item.total)}</span>
+          </div>`).join('')
+      : '<div class="empty">Welcome!</div>';
+  };
+  refresh();
+  clientDisplayTimer = setInterval(refresh, 1000);
+}
+
+let drawerSerialPort = null;
+
+function openCashDrawer() {
+  showToast('Cash drawer opened.', 'success');
+  logAudit('Cash drawer', 'Cash drawer opened by ' + (currentUser ? currentUser.name : 'user'));
+  if (navigator.serial) {
+    (async () => {
+      try {
+        if (!drawerSerialPort) drawerSerialPort = await navigator.serial.requestPort();
+        await drawerSerialPort.open({ baudRate: 9600 });
+        const writer = drawerSerialPort.writable.getWriter();
+        await writer.write(new Uint8Array([0x1B, 0x70, 0x00, 0x19, 0xFA]));
+        writer.releaseLock();
+        await drawerSerialPort.close();
+      } catch (error) {
+        drawerSerialPort = null;
+        if (error.name !== 'NotFoundError') console.warn('Cash drawer kick via serial failed:', error);
+      }
+    })();
+  }
+}
+
+async function readScaleWeight() {
+  const input = document.getElementById('scale-weight');
+  if (!input) return;
+  if (navigator.serial) {
+    try {
+      const port = await navigator.serial.requestPort();
+      await port.open({ baudRate: 9600 });
+      const reader = port.readable.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const match = buffer.match(/(\d+\.?\d*)\s*(kg|g|lb)/i);
+        if (match) {
+          let weight = parseFloat(match[1]);
+          if (/g/i.test(match[2])) weight = weight / 1000;
+          if (/lb/i.test(match[2])) weight = weight * 0.453592;
+          input.value = Number(weight.toFixed(3));
+          reader.releaseLock();
+          await port.close();
+          showToast(`Scale reading: ${input.value} kg`, 'success');
+          return;
+        }
+      }
+      reader.releaseLock();
+      await port.close();
+      showToast('No weight reading received from the scale.', 'info');
+    } catch (error) {
+      if (error.name !== 'NotFoundError') showToast('Scale read failed: ' + error.message, 'error');
+    }
+  } else {
+    showToast('Scale reading needs Chrome or Edge. Enter the weight manually.', 'info');
+    input.focus();
+    input.select();
+  }
+}
+
+function getCardReaderAmount() {
+  const total = getCurrentTotal();
+  const allocated = getPaymentsBreakdown().reduce((sum, p) => sum + p.amount, 0);
+  return Math.max(0, Math.round((total - allocated) * 100) / 100);
+}
+
+function setPaymentMethodAmount(method, amount) {
+  const input = document.querySelector(`.pay-method-amount[data-method="${CSS.escape(method)}"]`);
+  if (input) {
+    input.value = amount;
+    input.dispatchEvent(new Event('input'));
+    return true;
+  }
+  return false;
+}
+
+async function openCardReaderPayment() {
+  const amount = getCardReaderAmount();
+  if (amount <= 0) {
+    showToast('No balance left to charge to the card reader.', 'error');
+    return;
+  }
+  const cardMethod = getPaymentMethods().find((method) => /card/i.test(method));
+  if (window.PaymentRequest) {
+    try {
+      const request = new PaymentRequest(
+        [{ supportedMethods: 'basic-card' }],
+        { total: { label: 'Total', amount: { currency: 'NGN', value: amount.toFixed(2) } } }
+      );
+      const response = await request.show();
+      await response.complete('success');
+      const note = response && response.methodName ? String(response.methodName).replace('basic-card', 'Card') : 'Card';
+      if (cardMethod) {
+        setPaymentMethodAmount(cardMethod, amount);
+        showToast(`${note} payment of ${formatCurrency(amount)} captured.`, 'success');
+      } else {
+        showToast(`${note} captured ${formatCurrency(amount)}. Add a "Card" payment method to record it.`, 'info');
+      }
+    } catch (error) {
+      if (error.name !== 'AbortError') showToast('Card reader payment failed: ' + error.message, 'error');
+    }
+  } else {
+    const code = document.getElementById('card-approval-code').value.trim();
+    if (cardMethod) {
+      setPaymentMethodAmount(cardMethod, amount);
+      showToast(`Card payment of ${formatCurrency(amount)} recorded${code ? ' · ' + code : ''}.`, 'success');
+    } else {
+      showToast('Add a payment method named "Card" first, then take the card payment.', 'error');
+    }
+  }
+}
+
 function renderFeatureConfig() {
   const container = document.getElementById('full-package-config');
   if (!container) return;
@@ -6957,18 +8065,20 @@ function renderFeatureConfig() {
 
   if (features.branches) {
     const branches = getBranches();
+    const currentBranch = getCurrentBranch();
     parts.push(`<div class="card-panel fp-config-card">
-      <div class="card-title-row"><span class="card-icon orange">🏢</span><div><h3>Branches</h3><p>Active branch is recorded on new sales.</p></div></div>
-      <div class="fp-chips">${branches.map((name, i) => `<span class="fp-chip ${name === settings.currentBranch ? 'fp-active' : ''}">${escapeHtml(name)} <button onclick="removeBranch(${i})" title="Remove">×</button></span>`).join('') || '<span class="muted">No branches yet.</span>'}</div>
+      <div class="card-title-row"><span class="card-icon orange">🏢</span><div><h3>Branches</h3><p>Each terminal is bound to the branch it sells for, so sales and stock stay on the right branch.</p></div></div>
+      <div class="fp-chips">${branches.map((name, i) => `<span class="fp-chip ${name === currentBranch ? 'fp-active' : ''}">${escapeHtml(name)} <button onclick="removeBranch(${i})" title="Remove">×</button></span>`).join('') || '<span class="muted">No branches yet.</span>'}</div>
       <div class="pay-method-add">
         <input id="new-branch-name" type="text" placeholder="e.g. Lekki Branch" onkeydown="if(event.key==='Enter'){addBranch();}" />
         <button class="action-btn primary" onclick="addBranch()">Add branch</button>
       </div>
       ${branches.length ? `
-        <div class="field-group stacked"><label>Active branch</label>
+        <div class="field-group stacked"><label>Bind this terminal to branch</label>
           <select id="active-branch" onchange="setActiveBranch(this.value)">
-            ${branches.map((name) => `<option value="${escapeHtml(name)}" ${name === settings.currentBranch ? 'selected' : ''}>${escapeHtml(name)}</option>`).join('')}
+            ${branches.map((name) => `<option value="${escapeHtml(name)}" ${name === currentBranch ? 'selected' : ''}>${escapeHtml(name)}</option>`).join('')}
           </select>
+          <p class="form-hint">This terminal (${isSuperAdmin() ? 'Super Admin' : currentUser ? currentUser.name : 'user'}) will only make sales and deduct stock from <strong>${escapeHtml(currentBranch || 'All branches (shared)')}</strong>.</p>
         </div>` : ''}
     </div>`);
   }
@@ -7041,6 +8151,8 @@ function getBranches() {
 }
 
 function getCurrentBranch() {
+  const terminal = getTerminalBranch();
+  if (terminal) return terminal;
   const settings = getStoredSettings();
   return settings.currentBranch || (getBranches()[0] || '');
 }
@@ -7070,15 +8182,99 @@ function removeBranch(index) {
   if (removed.length && settings.currentBranch === removed[0]) {
     settings.currentBranch = branches[0] || '';
   }
+  if (removed.length && getTerminalBranch() === removed[0]) {
+    setTerminalBranch('');
+  }
   writeToStorage(STORAGE_KEYS.settings, settings);
   renderFeatureConfig();
 }
 
 function setActiveBranch(name) {
+  setTerminalBranch(name);
   const settings = getStoredSettings();
   settings.currentBranch = name;
   writeToStorage(STORAGE_KEYS.settings, settings);
-  showToast(`Active branch set to "${name}".`, 'success');
+  renderFeatureConfig();
+  renderBranchSelects();
+  renderInventoryManager();
+  renderPOS();
+  showToast(`This terminal bound to "${name}".`, 'success');
+  logAudit('Terminal branch set', `This terminal set to branch "${name}"`);
+}
+
+function getBranchInventory() {
+  const all = getFromStorage(STORAGE_KEYS.inventory);
+  if (!getFeature('branches')) return all;
+  const branch = getCurrentBranch();
+  if (!branch) return all;
+  return all.filter((item) => !item.branch || item.branch === branch);
+}
+
+function findInventoryRowForBranch(inventory, name, branch) {
+  const lower = String(name).toLowerCase();
+  if (!branch) return inventory.find((row) => row.name.toLowerCase() === lower);
+  return inventory.find((row) => row.branch === branch && row.name.toLowerCase() === lower)
+    || inventory.find((row) => !row.branch && row.name.toLowerCase() === lower);
+}
+
+function findInventoryRow(inventory, name) {
+  if (!getFeature('branches')) return inventory.find((row) => row.name.toLowerCase() === String(name).toLowerCase());
+  return findInventoryRowForBranch(inventory, name, getCurrentBranch());
+}
+
+let inventoryBranchFilter = null;
+
+function setInventoryBranchFilter(value) {
+  inventoryBranchFilter = value || '';
+  inventoryPage = 1;
+  renderInventoryManager();
+}
+
+function getInventoryBranchContext() {
+  if (!getFeature('branches')) return '';
+  if (isSuperAdmin() && inventoryBranchFilter === null) return '';
+  if (inventoryBranchFilter !== null) return inventoryBranchFilter;
+  return getCurrentBranch() || '';
+}
+
+function getInventoryForManager() {
+  const all = getFromStorage(STORAGE_KEYS.inventory);
+  if (!getFeature('branches')) return all;
+  const branch = getInventoryBranchContext();
+  if (!branch) return all;
+  return all.filter((item) => !item.branch || item.branch === branch);
+}
+
+function populateBranchOptions(selectEl, selectedValue, includeAll) {
+  if (!selectEl) return;
+  const branches = getBranches();
+  let html = '';
+  if (includeAll) html += '<option value="">All branches</option>';
+  branches.forEach((name) => {
+    html += `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`;
+  });
+  if (selectedValue && !branches.includes(selectedValue)) {
+    html += `<option value="${escapeHtml(selectedValue)}">${escapeHtml(selectedValue)}</option>`;
+  }
+  selectEl.innerHTML = html;
+  selectEl.value = selectedValue || '';
+}
+
+function renderBranchSelects() {
+  const wrap = document.getElementById('inv-branch-filter-wrap');
+  const stockField = document.getElementById('stock-branch-field');
+  const editField = document.getElementById('inv-edit-branch-field');
+  const importField = document.getElementById('inventory-import-branch-field');
+  const active = getFeature('branches') && getBranches().length > 0;
+  if (wrap) wrap.classList.toggle('hidden', !active);
+  if (stockField) stockField.classList.toggle('hidden', !active);
+  if (editField) editField.classList.toggle('hidden', !active);
+  if (importField) importField.classList.toggle('hidden', !active);
+  if (!active) return;
+  const context = getInventoryBranchContext();
+  populateBranchOptions(document.getElementById('inventory-branch-filter'), context, true);
+  populateBranchOptions(document.getElementById('stock-branch'), context, true);
+  populateBranchOptions(document.getElementById('inventory-import-branch'), getCurrentBranch() || '', true);
 }
 
 function getCurrencySymbol() {
@@ -7485,10 +8681,11 @@ function renderBookOrdersPanel() {
   const query = (document.getElementById('bookorders-search')?.value || '').trim().toLowerCase();
   if (query) {
     orders = orders.filter((o) =>
-      (o.customerName || '').toLowerCase().includes(query) ||
-      (o.phone || '').toLowerCase().includes(query) ||
-      (o.invoice || '').toLowerCase().includes(query) ||
-      (o.number || '').toLowerCase().includes(query)
+      ((o.customerName || '').toLowerCase().includes(query) ||
+       (o.phone || '').toLowerCase().includes(query) ||
+       (o.invoice || '').toLowerCase().includes(query) ||
+       (o.number || '').toLowerCase().includes(query)) &&
+      (bookOrderFilter === 'collected' || bookOrderFilter === 'voided' || (o.status !== 'collected' && o.status !== 'voided'))
     );
   }
   if (bookOrderFilter === 'online') orders = orders.filter((o) => o.source === 'online');
@@ -7548,7 +8745,7 @@ function renderBookOrderRow(order) {
         </div>
       </div>
       <div class="book-order-card-body">
-        <div class="book-order-customer">
+        <div class="book-order-customer ${order.status === 'pending' || order.status === undefined ? 'is-collectable' : ''}" onclick="${order.status === 'pending' || order.status === undefined ? `collectBookOrder(${order.id})` : ''}" title="${order.status === 'pending' || order.status === undefined ? 'Click to collect this order' : ''}">
           <span class="mini-avatar">${(order.customerName || '?').charAt(0).toUpperCase()}</span>
           <div class="book-order-customer-info">
             <strong>${escapeHtml(order.customerName || '—')}</strong>
@@ -7573,6 +8770,15 @@ function renderBookOrderRow(order) {
             <span>Part payment</span>
             <strong>${formatCurrency(order.partPayment)}</strong>
           </div>
+          ${order.partBank
+            ? `<div class="book-order-collect-row"><span>Part payment method</span><strong>${escapeHtml(order.partBank)}</strong></div>`
+            : ''}
+          ${(Number(order.fullPayment) || 0) > 0
+            ? `<div class="book-order-collect-row"><span>Full payment</span><strong>${formatCurrency(order.fullPayment)}</strong></div>`
+            : ''}
+          ${(order.paymentMethod || order.collectedBank)
+            ? `<div class="book-order-collect-row"><span>Payment method</span><strong>${escapeHtml((order.collectedBank || order.paymentMethod) === 'None' ? '-' : (order.collectedBank || order.paymentMethod))}</strong></div>`
+            : ''}
           <div class="book-order-collect-row due">
             <span>Balance due</span>
             <strong>${formatCurrency(order.balance)}</strong>
@@ -7620,6 +8826,10 @@ function openBookOrderModal(id) {
     bookOrderCart = (order.items || []).map((item) => ({ ...item }));
     bookOrderCakePrice = Number(order.cakePrice) || 0;
     populateBookOrderCakeSelect(order.cakeType || '');
+    const fullAmount = typeof order.fullPayment === 'number' ? (Number(order.fullPayment) || 0) : (order.fullPayment ? (Number(order.partPayment) || 0) : 0);
+    document.getElementById('book-order-full-payment-amount').value = fullAmount || '';
+    document.getElementById('book-order-bank').value = order.paymentMethod || '';
+    document.getElementById('book-order-part-bank').value = order.partBank || '';
   } else {
     document.querySelector('input[name="book-order-source"][value="online"]').checked = true;
     document.querySelector('input[name="book-order-category"][value="cake"]').checked = true;
@@ -7630,12 +8840,15 @@ function openBookOrderModal(id) {
     document.getElementById('book-order-collection-date').value = '';
     bookOrderCakePrice = 0;
     populateBookOrderCakeSelect('');
+    document.getElementById('book-order-full-payment-amount').value = '';
+    document.getElementById('book-order-bank').value = '';
+    document.getElementById('book-order-part-bank').value = '';
   }
 
   bookOrderToggleFields();
-  renderBookOrderProductPicker('');
+  renderBookOrderProductPicker();
   renderBookOrderItems();
-  bookOrderUpdateTotals();
+  renderBookOrderBankSelect();
   document.getElementById('book-order-modal').classList.remove('hidden');
 }
 
@@ -7677,26 +8890,30 @@ function bookOrderToggleFields() {
   document.getElementById('book-order-cake-section').style.display = category === 'cake' ? '' : 'none';
 }
 
-function renderBookOrderProductPicker(query) {
-  const container = document.getElementById('book-order-product-picker');
-  if (!container) return;
+function renderBookOrderProductPicker() {
+  const select = document.getElementById('book-order-product-select');
+  if (!select) return;
   const menu = getFromStorage(STORAGE_KEYS.menu);
-  const q = (query || '').trim().toLowerCase();
-  const items = menu.filter((item) => !q || item.name.toLowerCase().includes(q)).slice(0, 40);
-  container.innerHTML = items.length
-    ? items.map((item) => `
-        <div class="list-row book-order-pick-row">
-          <div class="mini-item">
-            <span class="mini-avatar">${item.name.charAt(0).toUpperCase()}</span>
-            <div>
-              <div>${escapeHtml(item.name)}</div>
-              <small>${escapeHtml(item.category || 'Menu')} · ${formatCurrency(item.price)}</small>
-            </div>
-          </div>
-          <button class="action-btn secondary" onclick="addBookOrderProduct(${item.id})">Add</button>
-        </div>
-      `).join('')
-    : '<div class="list-row"><div>No products match.</div></div>';
+  const items = menu.slice().sort((a, b) => a.name.localeCompare(b.name));
+  select.innerHTML = `
+    <option value="">— Select a product —</option>
+    ${items.map((item) => `<option value="${item.id}">${escapeHtml(item.name)} — ${formatCurrency(item.price)}</option>`).join('')}
+  `;
+  bookOrderProductSelectChanged();
+}
+
+function bookOrderProductSelectChanged() {
+  const select = document.getElementById('book-order-product-select');
+  const addBtn = select ? select.nextElementSibling : null;
+  if (addBtn) addBtn.disabled = !select.value;
+}
+
+function addSelectedBookOrderProduct() {
+  const select = document.getElementById('book-order-product-select');
+  if (!select || !select.value) return;
+  addBookOrderProduct(Number(select.value));
+  select.value = '';
+  bookOrderProductSelectChanged();
 }
 
 function addBookOrderProduct(itemId) {
@@ -7762,12 +8979,30 @@ function bookOrderUpdateTotals() {
   const cakeTotal = category === 'cake' ? (Number(document.getElementById('book-order-cake-price').value) || 0) : 0;
   const productsTotal = bookOrderCart.reduce((sum, item) => sum + (Number(item.price) || 0) * item.qty, 0);
   const total = cakeTotal + productsTotal;
-  const partPayment = Number(document.getElementById('book-order-part-payment').value) || 0;
-  const balance = Math.max(0, total - partPayment);
+  const partInput = document.getElementById('book-order-part-payment');
+  const fullInput = document.getElementById('book-order-full-payment-amount');
+  const partPayment = Number(partInput.value) || 0;
+  const fullPayment = Number(fullInput.value) || 0;
+  const amountPaid = partPayment + fullPayment;
+  const balance = Math.max(0, total - amountPaid);
   document.getElementById('book-order-total').textContent = formatCurrency(total);
   const partDisplay = document.getElementById('book-order-part-payment-display');
   if (partDisplay) partDisplay.textContent = formatCurrency(partPayment);
+  const fullDisplay = document.getElementById('book-order-full-payment-display');
+  if (fullDisplay) fullDisplay.textContent = formatCurrency(fullPayment);
   document.getElementById('book-order-balance').textContent = formatCurrency(balance);
+}
+
+function renderBookOrderBankSelect() {
+  const methods = getPaymentMethods();
+  const options = methods.map((m) => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join('');
+  const partOptions = '<option value="None">— None —</option>' + options;
+  const bank = document.getElementById('book-order-bank');
+  if (bank) bank.innerHTML = partOptions;
+  const partBank = document.getElementById('book-order-part-bank');
+  if (partBank) partBank.innerHTML = partOptions;
+  const collectBank = document.getElementById('book-order-collect-bank');
+  if (collectBank) collectBank.innerHTML = options;
 }
 
 function getNextBookOrderNumber() {
@@ -7804,6 +9039,9 @@ function saveBookOrder() {
   const address = document.getElementById('book-order-address').value.trim();
   const collectionDate = document.getElementById('book-order-collection-date').value;
   const partPayment = Number(document.getElementById('book-order-part-payment').value) || 0;
+  const fullPayment = Number(document.getElementById('book-order-full-payment-amount').value) || 0;
+  const paymentMethod = document.getElementById('book-order-bank').value || '';
+  const partBank = document.getElementById('book-order-part-bank').value || '';
   const source = document.querySelector('input[name="book-order-source"]:checked').value;
   const category = document.querySelector('input[name="book-order-category"]:checked').value;
   const errorEl = document.getElementById('book-order-error');
@@ -7816,7 +9054,7 @@ function saveBookOrder() {
   const cakePrice = category === 'cake' ? (Number(document.getElementById('book-order-cake-price').value) || 0) : 0;
   const productsTotal = bookOrderCart.reduce((sum, item) => sum + (Number(item.price) || 0) * item.qty, 0);
   const total = cakePrice + productsTotal;
-  const balance = Math.max(0, total - partPayment);
+  const balance = Math.max(0, total - (partPayment + fullPayment));
 
   const orders = getFromStorage(STORAGE_KEYS.bookOrders);
   const isNew = !editingBookOrderId;
@@ -7843,6 +9081,9 @@ function saveBookOrder() {
   order.address = address;
   order.items = bookOrderCart.map((item) => ({ id: item.id, name: item.name, price: item.price, qty: item.qty }));
   order.partPayment = partPayment;
+  order.fullPayment = fullPayment;
+  order.paymentMethod = paymentMethod;
+  order.partBank = partBank;
   order.collectionDate = collectionDate;
   order.total = total;
   order.balance = balance;
@@ -7855,15 +9096,83 @@ function saveBookOrder() {
   showToast(`Book order ${order.invoice || order.number} saved.`, 'success');
 }
 
+let collectingBookOrderId = null;
+
 function collectBookOrder(id) {
+  const orders = getFromStorage(STORAGE_KEYS.bookOrders);
+  const order = orders.find((o) => o.id === id);
+  if (!order) return;
+  if ((Number(order.balance) || 0) > 0) {
+    openBookOrderCollectModal(id);
+  } else {
+    doCollectBookOrder(id);
+  }
+}
+
+function openBookOrderCollectModal(id) {
+  const orders = getFromStorage(STORAGE_KEYS.bookOrders);
+  const order = orders.find((o) => o.id === id);
+  if (!order) return;
+  collectingBookOrderId = id;
+  const summary = document.getElementById('book-order-collect-summary');
+  summary.innerHTML = `
+    <div class="book-order-collect-summary-row"><span>Customer</span><strong>${escapeHtml(order.customerName || '—')}</strong></div>
+    <div class="book-order-collect-summary-row"><span>Invoice</span><strong>${escapeHtml(order.invoice || order.number || '—')}</strong></div>
+    <div class="book-order-collect-summary-row"><span>Total</span><strong>${formatCurrency(order.total)}</strong></div>
+    <div class="book-order-collect-summary-row"><span>Part payment</span><strong>${formatCurrency(order.partPayment)}</strong></div>
+    <div class="book-order-collect-summary-row"><span>Full payment</span><strong>${formatCurrency(Number(order.fullPayment) || 0)}</strong></div>
+    <div class="book-order-collect-summary-row due"><span>Balance due</span><strong>${formatCurrency(order.balance)}</strong></div>
+  `;
+  document.getElementById('book-order-collect-invoice').value = order.invoice || order.number || '';
+  document.getElementById('book-order-collect-balance').value = '';
+  document.getElementById('book-order-collect-error').textContent = '';
+  renderBookOrderBankSelect();
+  document.getElementById('book-order-collect-bank').value = (order.paymentMethod && order.paymentMethod !== 'None') ? order.paymentMethod : '';
+  document.getElementById('book-order-collect-modal').classList.remove('hidden');
+}
+
+function closeBookOrderCollectModal() {
+  document.getElementById('book-order-collect-modal').classList.add('hidden');
+  collectingBookOrderId = null;
+}
+
+function doCollectBookOrder(id) {
   const orders = getFromStorage(STORAGE_KEYS.bookOrders);
   const order = orders.find((o) => o.id === id);
   if (!order) return;
   order.status = 'collected';
   order.collectedAt = new Date().toISOString();
+  order.collectedBalance = 0;
   writeToStorage(STORAGE_KEYS.bookOrders, orders);
   renderBookOrdersPanel();
   logAudit('Book order collected', `${order.invoice || order.number} · ${order.customerName}`);
+  showToast(`${order.invoice || order.number} marked as collected.`, 'success');
+}
+
+function confirmCollectBookOrder() {
+  const orders = getFromStorage(STORAGE_KEYS.bookOrders);
+  const order = orders.find((o) => o.id === collectingBookOrderId);
+  const errorEl = document.getElementById('book-order-collect-error');
+  if (!order) { closeBookOrderCollectModal(); return; }
+
+  const expectedInvoice = (order.invoice || order.number || '').trim().toLowerCase();
+  const enteredInvoice = document.getElementById('book-order-collect-invoice').value.trim().toLowerCase();
+  if (!enteredInvoice) { errorEl.textContent = 'Enter the invoice number to confirm this order.'; return; }
+  if (enteredInvoice !== expectedInvoice) { errorEl.textContent = 'Invoice number does not match this order.'; return; }
+
+  const enteredBalance = Number(document.getElementById('book-order-collect-balance').value) || 0;
+  const dueBalance = Number(order.balance) || 0;
+  if (enteredBalance <= 0) { errorEl.textContent = 'Enter the balance received now (must be greater than 0).'; return; }
+  if (enteredBalance !== dueBalance) { errorEl.textContent = `Entered balance must equal the balance due (${formatCurrency(dueBalance)}).`; return; }
+
+  order.status = 'collected';
+  order.collectedAt = new Date().toISOString();
+  order.collectedBalance = enteredBalance;
+  order.collectedBank = document.getElementById('book-order-collect-bank').value || '';
+  writeToStorage(STORAGE_KEYS.bookOrders, orders);
+  closeBookOrderCollectModal();
+  renderBookOrdersPanel();
+  logAudit('Book order collected', `${order.invoice || order.number} · ${order.customerName} · balance ${formatCurrency(enteredBalance)} received`);
   showToast(`${order.invoice || order.number} marked as collected.`, 'success');
 }
 
@@ -8006,8 +9315,15 @@ function printBookOrderReceipt(id) {
         <table>
           <tr class="bold grand"><td>TOTAL</td><td class="right">${formatCurrency(order.total)}</td></tr>
           <tr><td>Part payment</td><td class="right">${formatCurrency(order.partPayment)}</td></tr>
+          <tr><td>Full payment</td><td class="right">${formatCurrency(Number(order.fullPayment) || 0)}</td></tr>
           <tr class="bold"><td>Balance due</td><td class="right">${formatCurrency(order.balance)}</td></tr>
         </table>
+        ${order.partBank
+          ? `<div class="meta"><strong>Part payment:</strong> ${truncate(order.partBank, nameLimit)}</div>`
+          : ''}
+        ${(order.paymentMethod || order.collectedBank)
+          ? `<div class="meta"><strong>Payment:</strong> ${truncate((order.collectedBank || order.paymentMethod) === 'None' ? '-' : (order.collectedBank || order.paymentMethod), nameLimit)}</div>`
+          : ''}
         <div class="divider"></div>
         <div class="footer">Bring this receipt when coming to collect.</div>
         <div class="footer">Thank you for your patronage</div>
@@ -8482,7 +9798,7 @@ function renderUserManagement() {
 
   container.innerHTML = users.map((user) => {
     const isSelf = currentUser && user.username === currentUser.username;
-    const isAdmin = user.role === 'admin';
+    const isProtected = user.role === 'admin' || user.role === 'superadmin';
     const selfBadge = isSelf ? ' <span class="badge info">You</span>' : '';
     const roleClass = ROLE_LABELS[user.role] ? ` role-${user.role}` : '';
     return `
@@ -8492,12 +9808,12 @@ function renderUserManagement() {
           <div class="user-row-name">${user.name}${selfBadge}</div>
           <small>@${user.username}</small>
         </div>
-        <select class="role-select" onchange="updateUserRole(${user.id}, this.value)" ${isAdmin ? 'disabled' : ''}>
+        <select class="role-select" onchange="updateUserRole(${user.id}, this.value)" ${isProtected ? 'disabled' : ''}>
           ${Object.entries(ROLE_LABELS).map(([value, text]) => `
             <option value="${value}" ${user.role === value ? 'selected' : ''}>${text}</option>
           `).join('')}
         </select>
-        <button class="table-action danger" onclick="removeUser(${user.id})" ${isAdmin || isSelf ? 'disabled' : ''}>Remove</button>
+        <button class="table-action danger" onclick="removeUser(${user.id})" ${isProtected || isSelf ? 'disabled' : ''}>Remove</button>
       </div>
     `;
   }).join('');
@@ -8549,7 +9865,7 @@ function updateUserRole(userId, role) {
 function removeUser(userId) {
   const users = getFromStorage(STORAGE_KEYS.users);
   const user = users.find((entry) => entry.id === userId);
-  if (!user || user.role === 'admin') return;
+  if (!user || user.role === 'admin' || user.role === 'superadmin') return;
   if (currentUser && currentUser.id === userId) return;
 
   writeToStorage(STORAGE_KEYS.users, users.filter((entry) => entry.id !== userId));
@@ -8646,7 +9962,9 @@ const RESET_LABELS = {
   purchases: 'Purchases',
   closings: 'Daily closings',
   refunds: 'Refunds',
-  priceHistory: 'Price history'
+  priceHistory: 'Price history',
+  bookOrders: 'Book orders',
+  purchaseOrders: 'Purchase orders'
 };
 
 let pendingReset = { scope: 'none' };
@@ -8709,7 +10027,7 @@ function executeReset() {
   }
 
   const scopes = pendingReset.scope === 'factory'
-    ? ['menu', 'inventory', 'stockLog', 'sales', 'shifts', 'voids', 'leftovers', 'promos', 'audit', 'payments', 'users', 'settings', 'customers', 'purchases', 'closings', 'refunds', 'priceHistory']
+    ? ['menu', 'inventory', 'stockLog', 'sales', 'shifts', 'voids', 'leftovers', 'promos', 'audit', 'payments', 'users', 'settings', 'customers', 'purchases', 'closings', 'refunds', 'priceHistory', 'bookOrders', 'purchaseOrders']
     : (pendingReset.scopes || []);
 
   if (scopes.includes('menu')) writeToStorage(STORAGE_KEYS.menu, []);
@@ -8731,6 +10049,8 @@ function executeReset() {
   if (scopes.includes('closings')) writeToStorage(STORAGE_KEYS.closings, []);
   if (scopes.includes('refunds')) writeToStorage(STORAGE_KEYS.refunds, []);
   if (scopes.includes('priceHistory')) writeToStorage(STORAGE_KEYS.priceHistory, []);
+  if (scopes.includes('bookOrders')) writeToStorage(STORAGE_KEYS.bookOrders, []);
+  if (scopes.includes('purchaseOrders')) writeToStorage(STORAGE_KEYS.purchaseOrders, []);
 
   if (scopes.includes('settings')) {
     writeToStorage(STORAGE_KEYS.settings, defaultSettings);
@@ -8782,7 +10102,7 @@ function saveSettings() {
     receiptWidth: document.getElementById('receipt-width').value,
     qrImage: current.qrImage || '',
     paymentMethods: getPaymentMethods(),
-    salesTarget: Number(document.getElementById('sales-target').value) || 0,
+    salesTarget: Number(document.getElementById('sales-target')?.value) || 0,
     loyaltyEnabled: document.getElementById('loyalty-enabled-toggle').checked,
     loyaltyPointsPer100: Number(document.getElementById('loyalty-points-per').value) || 0,
     loyaltyPointValue: Number(document.getElementById('loyalty-point-value').value) || 0,
@@ -8845,7 +10165,7 @@ function checkLowStockNotification(force = false) {
   const list = document.getElementById('stock-alert-list');
   if (!bell || !badge || !list) return;
 
-  const inventory = getFromStorage(STORAGE_KEYS.inventory);
+  const inventory = getBranchInventory();
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const soon = new Date(today);
@@ -9024,6 +10344,8 @@ function handleInventorySubmit(event) {
   const price = Number(document.getElementById('stock-price').value);
   const reorderLevel = Number(document.getElementById('stock-reorder').value || 0);
   const expiryDate = document.getElementById('stock-expiry').value || null;
+  const branchEl = document.getElementById('stock-branch');
+  const branch = branchEl ? branchEl.value : '';
 
   if (!name || Number.isNaN(quantity) || quantity < 0) {
     showToast('Enter valid inventory details.', 'error');
@@ -9039,6 +10361,7 @@ function handleInventorySubmit(event) {
     price: Number.isFinite(price) && price > 0 ? price : null,
     reorderLevel,
     expiryDate,
+    branch,
     createdAt: new Date().toISOString()
   });
 
@@ -9082,6 +10405,13 @@ function openInventoryEdit(id) {
   document.getElementById('inv-edit-reorder').value = item.reorderLevel ?? '';
   document.getElementById('inv-edit-expiry').value = item.expiryDate || '';
 
+  const branchEl = document.getElementById('inv-edit-branch');
+  const branchField = document.getElementById('inv-edit-branch-field');
+  if (branchField) branchField.classList.toggle('hidden', !(getFeature('branches') && getBranches().length > 0));
+  if (branchEl) {
+    populateBranchOptions(branchEl, item.branch || '', true);
+  }
+
   document.getElementById('inventory-edit-modal').classList.remove('hidden');
   document.getElementById('inv-edit-name').focus();
 }
@@ -9105,6 +10435,8 @@ function saveInventoryEdit() {
   const stock = Number(document.getElementById('inv-edit-stock').value);
   const reorderLevel = Number(document.getElementById('inv-edit-reorder').value || 0);
   const expiryDate = document.getElementById('inv-edit-expiry').value || null;
+  const branchEl = document.getElementById('inv-edit-branch');
+  const branch = branchEl ? branchEl.value : item.branch || '';
 
   if (!name || Number.isNaN(stock) || stock < 0) {
     showToast('Enter a valid name and stock quantity.', 'error');
@@ -9121,6 +10453,7 @@ function saveInventoryEdit() {
   item.stock = stock;
   item.reorderLevel = reorderLevel;
   item.expiryDate = expiryDate;
+  item.branch = branch;
   if (item.returnedFromLeftover) {
     item.returnedFromLeftover = false;
     item.returnedAt = null;
@@ -9263,6 +10596,7 @@ function refreshLivePanels() {
   if (document.getElementById('leftover-panel')?.classList.contains('active')) renderLeftoverManager();
   if (document.getElementById('promos-panel')?.classList.contains('active')) renderPromosManager();
   if (document.getElementById('audit-panel')?.classList.contains('active')) renderAuditManager();
+  renderConnectedSystems();
   if (document.getElementById('tables-panel')?.classList.contains('active')) renderTablesPanel();
   if (document.getElementById('kitchen-panel')?.classList.contains('active')) renderKitchenPanel();
   if (document.getElementById('purchaseorders-panel')?.classList.contains('active')) renderPurchaseOrdersPanel();
@@ -9270,17 +10604,28 @@ function refreshLivePanels() {
 }
 
 async function pollServerSync() {
-  if (!serverOnline) return;
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 3000);
     const res = await fetch('/api/data', { signal: controller.signal, cache: 'no-store' });
     clearTimeout(timer);
-    if (!res.ok) return;
+    if (!res.ok) throw new Error('Server unavailable');
     const payload = await res.json();
     const data = (payload && payload.data) || {};
+    if (!serverOnline) {
+      serverOnline = true;
+      connectServerEvents();
+      sendHeartbeat();
+      pollSystems();
+      pendingPushKeys.forEach((key) => {
+        if (memoryStore[key] !== undefined) pushToServer(key, memoryStore[key]);
+      });
+    }
     const sig = JSON.stringify(Object.entries(data).sort((a, b) => (a[0] < b[0] ? -1 : 1)).map(([k, v]) => [k, v]));
-    if (sig === lastPollJson) return;
+    if (sig === lastPollJson) {
+      refreshLivePanels();
+      return;
+    }
     lastPollJson = sig;
     let changed = false;
     SERVER_KEYS.forEach((key) => {
@@ -9292,7 +10637,9 @@ async function pollServerSync() {
       }
     });
     if (changed) refreshLivePanels();
-  } catch (error) {}
+  } catch (error) {
+    serverOnline = false;
+  }
 }
 
 function repairDuplicateMenuIds() {
@@ -9342,6 +10689,10 @@ function applyTimeGreeting() {
 }
 
 function boot() {
+  applyTheme(getSavedTheme());
+  if (!isTerminalNamed() && getTerminalSystem() === 'System 1') {
+    setTerminalSystem('');
+  }
   initServerSync().then(() => {
     initStorage();
     applyBrandName();
@@ -9370,7 +10721,7 @@ function bootReady() {
     document.documentElement.classList.remove('app-logged-in');
   }
 
-  const VALID_REPORT_TABS = ['sales', 'invoice', 'summary', 'analysis', 'inventory', 'menu', 'orders', 'tax', 'payments', 'stock', 'products', 'daily', 'transactions', 'customers', 'refunds', 'purchases', 'closings', 'price', 'shift', 'void', 'leftover', 'promos', 'tables', 'kitchen', 'delivery', 'modifiers', 'tips', 'purchaseorders', 'branches', 'receipts', 'bookorders'];
+  const VALID_REPORT_TABS = ['sales', 'invoice', 'summary', 'totals', 'analysis', 'inventory', 'menu', 'orders', 'tax', 'payments', 'stock', 'products', 'daily', 'weekly', 'transactions', 'customers', 'refunds', 'purchases', 'closings', 'price', 'shift', 'void', 'leftover', 'promos', 'tables', 'kitchen', 'delivery', 'modifiers', 'tips', 'purchaseorders', 'branches', 'systems', 'receipts', 'bookorders'];
   const VALID_PERIODS = ['today', '7d', '30d', 'all'];
   const savedReportTab = localStorage.getItem(STORAGE_KEYS.reportTab);
   if (savedReportTab && VALID_REPORT_TABS.includes(savedReportTab)) reportTab = savedReportTab;
@@ -9495,6 +10846,7 @@ function bootReady() {
   });
 
   setInterval(() => { pollServerSync(); refreshLivePanels(); }, 5000);
+  setInterval(() => { sendHeartbeat(); pollSystems(); }, 10000);
   window.addEventListener('storage', refreshLivePanels);
   window.addEventListener('focus', refreshLivePanels);
   document.addEventListener('visibilitychange', () => {
@@ -9504,6 +10856,14 @@ function bootReady() {
   setInterval(applyTimeGreeting, 30000);
   setInterval(() => { if (currentUser) saveRecoverySnapshot(); }, 60000);
   window.addEventListener('beforeunload', () => { if (currentUser) saveRecoverySnapshot(); });
+  window.addEventListener('beforeunload', () => {
+    if (serverOnline) {
+      try {
+        const payload = JSON.stringify({ id: getTerminalId(), system: getTerminalSystem(), user: currentUser ? currentUser.name : '', status: 'offline' });
+        navigator.sendBeacon('/api/heartbeat', new Blob([payload], { type: 'application/json' }));
+      } catch (error) {}
+    }
+  });
 
   let touchStartY = 0;
   document.addEventListener('touchstart', (event) => {
@@ -9540,6 +10900,7 @@ function bootReady() {
   }
 
   setTimeout(checkRecovery, 1200);
+  applyHardwareUI();
 }
 
 boot();

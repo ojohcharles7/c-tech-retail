@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FasterFood POS — Locate Server</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: #cfcfce;
+    color: #18181b;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .card {
+    width: min(94vw, 520px);
+    background: #e7e7e7;
+    border: 1px solid #c7c7c7;
+    border-radius: 16px;
+    padding: 22px;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.12);
+  }
+  .head { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+  .head img { width: 40px; height: 40px; border-radius: 10px; }
+  .head h1 { font-size: 18px; color: #b91c1c; }
+  .head p { font-size: 12px; color: #71717a; }
+  .row { display: flex; gap: 8px; margin-top: 16px; }
+  .row input {
+    flex: 1;
+    padding: 11px 13px;
+    border: 1px solid #c7c7c7;
+    border-radius: 10px;
+    background: #fff;
+    font-size: 14px;
+  }
+  .row input.wide { flex: 2; }
+  .row input.narrow { flex: 1; max-width: 90px; }
+  .row button {
+    padding: 11px 16px;
+    border: none;
+    border-radius: 10px;
+    background: #b91c1c;
+    color: #fff;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .quick {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+  }
+  .quick button {
+    padding: 7px 11px;
+    border: 1px solid #c7c7c7;
+    border-radius: 999px;
+    background: #f3f4f6;
+    color: #18181b;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .quick button:hover { background: #e7e7e7; }
+  .hint { font-size: 12px; color: #71717a; margin-top: 12px; line-height: 1.5; }
+  #results { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+  .empty { font-size: 13px; color: #71717a; text-align: center; padding: 10px; }
+  .found {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 13px;
+    border: 1px solid #c7c7c7;
+    border-radius: 12px;
+    background: #fff;
+  }
+  .dot { width: 10px; height: 10px; border-radius: 999px; background: #22c55e; box-shadow: 0 0 0 4px rgba(34,197,94,0.18); flex: 0 0 auto; }
+  .info { flex: 1; min-width: 0; }
+  .info strong { display: block; font-size: 14px; }
+  .info small { display: block; color: #71717a; font-size: 12px; word-break: break-all; }
+  .found a {
+    padding: 8px 13px;
+    border-radius: 10px;
+    background: #b91c1c;
+    color: #fff;
+    font-weight: 700;
+    font-size: 13px;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="head">
+      <img src="logo.png" alt="" onerror="this.style.display='none'" />
+      <div>
+        <h1>FasterFood POS</h1>
+        <p>Find your server on this network</p>
+      </div>
+    </div>
+
+    <div class="row">
+      <input class="wide" id="subnet" type="text" placeholder="Subnet, e.g. 192.168.1" autocomplete="off" />
+      <input class="narrow" id="port" type="number" value="5501" min="1" max="65535" />
+      <button onclick="startScan()">Scan</button>
+    </div>
+
+    <div class="quick">
+      <button onclick="quickScan()">Scan common ranges</button>
+      <button onclick="scanSubnet('192.168.0')">192.168.0.x</button>
+      <button onclick="scanSubnet('192.168.1')">192.168.1.x</button>
+      <button onclick="scanSubnet('192.168.100')">192.168.100.x</button>
+      <button onclick="scanSubnet('10.0.0')">10.0.0.x</button>
+    </div>
+
+    <p class="hint" id="hint"></p>
+    <div id="results"></div>
+  </div>
+
+<script>
+var resultsEl = document.getElementById('results');
+var hintEl = document.getElementById('hint');
+
+function detectSubnet() {
+  var host = location.hostname || '';
+  if (host && host !== 'localhost' && host !== '127.0.0.1' && /^\d+\.\d+\.\d+\.\d+$/.test(host)) {
+    return host.split('.').slice(0, 3).join('.');
+  }
+  return '';
+}
+
+window.addEventListener('DOMContentLoaded', function () {
+  var subnet = document.getElementById('subnet');
+  if (!subnet.value) subnet.value = detectSubnet();
+});
+
+function probe(ip, port) {
+  return new Promise(function (resolve) {
+    var controller = new AbortController();
+    var timer = setTimeout(function () { controller.abort(); }, 350);
+    fetch('http://' + ip + ':' + port + '/api/info', { signal: controller.signal, mode: 'cors' })
+      .then(function (res) { return res.ok ? res.json() : null; })
+      .then(function (info) { resolve(info && info.app === 'FasterFood POS' ? { ip: ip, port: port, info: info } : null); })
+      .catch(function () { resolve(null); })
+      .finally(function () { clearTimeout(timer); });
+  });
+}
+
+function render(found) {
+  found.sort(function (a, b) { return a.ip.localeCompare(b.ip, undefined, { numeric: true }); });
+  if (!found.length) {
+    resultsEl.innerHTML = '<div class="empty">No FasterFood POS server found. Check the subnet, port, and that the server PC allows port ' + (document.getElementById('port').value || '5501') + ' through the firewall.</div>';
+    return;
+  }
+  resultsEl.innerHTML = found.map(function (entry) {
+    var url = 'http://' + entry.ip + ':' + entry.port;
+    var addrs = (entry.info.addresses || []).map(function (a) { return a.address; }).join(', ');
+    return '<div class="found"><span class="dot"></span><div class="info"><strong>FasterFood POS</strong><small>' + url + (addrs ? ' · ' + addrs : '') + '</small></div><a href="' + url + '">Open</a></div>';
+  }).join('');
+}
+
+function scanHosts(prefix, port) {
+  resultsEl.innerHTML = '<div class="empty">Scanning ' + prefix + '.1–254 on port ' + port + '…</div>';
+  var found = [];
+  var index = 1;
+  var done = 0;
+  var concurrency = 16;
+  var workers = [];
+  for (var w = 0; w < concurrency; w++) {
+    workers.push((async function () {
+      while (true) {
+        var i = index++;
+        if (i > 254) break;
+        var result = await probe(prefix + '.' + i, port);
+        if (result) found.push(result);
+        done++;
+        if (done % 50 === 0) resultsEl.innerHTML = '<div class="empty">Scanning… ' + done + '/254</div>';
+      }
+    })());
+  }
+  Promise.all(workers).then(function () { render(found); });
+}
+
+function scanSubnet(prefix) {
+  document.getElementById('subnet').value = prefix;
+  scanHosts(prefix, document.getElementById('port').value || '5501');
+}
+
+function startScan() {
+  var prefix = document.getElementById('subnet').value.trim().replace(/\.+$/, '');
+  if (!/^\d{1,3}(\.\d{1,3}){2}$/.test(prefix)) {
+    resultsEl.innerHTML = '<div class="empty">Enter a valid subnet like 192.168.1</div>';
+    return;
+  }
+  scanHosts(prefix, document.getElementById('port').value || '5501');
+}
+
+function quickScan() {
+  hintEl.textContent = 'Scanning 192.168.0.x, 192.168.1.x, 192.168.2.x, 192.168.100.x, 10.0.0.x and 172.16.0.x…';
+  var ranges = ['192.168.0', '192.168.1', '192.168.2', '192.168.100', '10.0.0', '172.16.0'];
+  var port = document.getElementById('port').value || '5501';
+  var found = [];
+  var index = 0;
+  var active = 0;
+  function next() {
+    while (active < 6 && index < ranges.length) {
+      var prefix = ranges[index++];
+      active++;
+      scanHostsCollect(prefix, port, function (results) {
+        found = found.concat(results);
+        active--;
+        if (active === 0 && index >= ranges.length) {
+          hintEl.textContent = '';
+          render(found);
+        } else {
+          next();
+        }
+      });
+    }
+  }
+  next();
+}
+
+function scanHostsCollect(prefix, port, onDone) {
+  var found = [];
+  var index = 1;
+  var done = 0;
+  var concurrency = 16;
+  var workers = [];
+  for (var w = 0; w < concurrency; w++) {
+    workers.push((async function () {
+      while (true) {
+        var i = index++;
+        if (i > 254) break;
+        var result = await probe(prefix + '.' + i, port);
+        if (result) found.push(result);
+        done++;
+      }
+    })());
+  }
+  Promise.all(workers).then(function () { onDone(found); });
+}
+</script>
+</body>
+</html>

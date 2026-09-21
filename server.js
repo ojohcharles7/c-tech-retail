@@ -27,6 +27,75 @@ let db = {};
 let saveTimer = null;
 const sseClients = new Set();
 
+const systems = {};
+const SYSTEM_ONLINE_MS = 120000;
+
+function isServerSelf(ip) {
+  if (!ip) return false;
+  const clean = String(ip).replace(/^::ffff:/, '');
+  if (clean === '127.0.0.1' || clean === '::1') return true;
+  return getNetworkAddresses().some((entry) => entry.address === clean);
+}
+
+function getSystemsList() {
+  const now = Date.now();
+  return Object.entries(systems)
+    .filter(([, entry]) => entry && entry.name)
+    .map(([id, entry]) => ({
+      id,
+      name: entry.name,
+      user: entry.user || '',
+      ip: entry.ip || '',
+      lastSeen: entry.lastSeen || 0,
+      online: now - (entry.lastSeen || 0) < SYSTEM_ONLINE_MS
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+}
+
+function broadcastSystems() {
+  const payload = `data: ${JSON.stringify({ key: 'systems', value: getSystemsList() })}\n\n`;
+  for (const res of sseClients) {
+    try { res.write(payload); } catch (error) { sseClients.delete(res); }
+  }
+}
+
+function handleHeartbeat(id, system, user, ip, status) {
+  if (!id) return '';
+  const now = Date.now();
+  if (status === 'offline') {
+    if (systems[id]) {
+      systems[id].lastSeen = 0;
+      systems[id].user = user || systems[id].user;
+      broadcastSystems();
+    }
+    return systems[id] ? systems[id].name : '';
+  }
+  const wasOnline = !!systems[id] && now - systems[id].lastSeen < SYSTEM_ONLINE_MS;
+  const usedNames = new Set(Object.values(systems).map((entry) => entry.name).filter(Boolean));
+  let assignedName = system && system.trim() ? system.trim() : '';
+  if (!assignedName) {
+    if (isServerSelf(ip)) {
+      assignedName = 'System 1';
+    } else {
+      let n = 1;
+      while (usedNames.has('System ' + n)) n += 1;
+      assignedName = 'System ' + n;
+    }
+  }
+  systems[id] = { name: assignedName, user: user || '', ip: ip || '', lastSeen: now };
+  if (!wasOnline) broadcastSystems();
+  return assignedName;
+}
+
+let lastOnlineMap = '';
+setInterval(() => {
+  const onlineMap = JSON.stringify(getSystemsList().map((entry) => [entry.name, entry.online]));
+  if (onlineMap !== lastOnlineMap) {
+    lastOnlineMap = onlineMap;
+    broadcastSystems();
+  }
+}, 5000);
+
 function loadDb() {
   try {
     const raw = fs.readFileSync(DB_FILE, 'utf8');
@@ -72,11 +141,29 @@ const server = http.createServer((req, res) => {
   const pathname = decodeURIComponent(url.pathname);
 
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') {
     res.writeHead(204);
     res.end();
+    return;
+  }
+
+  if (pathname === '/api/heartbeat' && req.method === 'POST') {
+    readBody(req, (body) => {
+      try {
+        const parsed = JSON.parse(body || '{}');
+        const assigned = handleHeartbeat(parsed.id, parsed.system, parsed.user, req.socket.remoteAddress, parsed.status);
+        sendJson(res, 200, { ok: true, ip: req.socket.remoteAddress, system: assigned });
+      } catch (error) {
+        sendJson(res, 400, { error: 'Invalid JSON body' });
+      }
+    });
+    return;
+  }
+
+  if (pathname === '/api/systems' && req.method === 'GET') {
+    sendJson(res, 200, { systems: getSystemsList() });
     return;
   }
 

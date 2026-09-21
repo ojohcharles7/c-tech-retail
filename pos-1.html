@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+  <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -72,6 +72,20 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4.5" width="20" height="15" rx="2.5"/><path d="M6 8.5h.01M9.5 8.5h.01M13 8.5h.01M16.5 8.5h.01M18 8.5h.01"/><path d="M6 12.5h.01M9.5 12.5h.01M13 12.5h.01M16.5 12.5h.01M18 12.5h.01"/><path d="M8 16h8"/></svg>
               </button>
             </div>
+            <button type="button" class="locate-server-btn" onclick="toggleLocateServer()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>
+              <span>Locate server on this network</span>
+            </button>
+            <div id="locate-server-panel" class="locate-server-panel hidden">
+              <div class="locate-row">
+                <input id="locate-subnet" type="text" placeholder="e.g. 192.168.1" autocomplete="off" />
+                <span class="locate-port-sep">:</span>
+                <input id="locate-port" type="number" min="1" max="65535" placeholder="5501" autocomplete="off" />
+                <button type="button" class="action-btn primary" onclick="scanForServers()">Scan</button>
+              </div>
+              <p class="form-hint">Scans hosts 1–254 on the subnet for a FasterFood POS server.</p>
+              <div id="locate-results" class="locate-results"></div>
+            </div>
             <div class="login-built">
                 <span>Built by</span>
                 <span class="built-name">CHARITEC CONCEPTS</span>
@@ -89,10 +103,6 @@
         <span class="bar"></span><span class="bar"></span><span class="bar"></span>
       </button>
       <div id="nav-overlay" onclick="closeNav()" aria-hidden="true"></div>
-      <div class="stock-alert-bell hidden" id="stock-alert-bell" onclick="toggleStockAlertPanel()" title="Stock alerts">
-        <span class="bell-icon">🔔</span>
-        <span class="stock-alert-badge" id="stock-alert-badge">0</span>
-      </div>
       <div class="stock-alert-panel hidden" id="stock-alert-panel">
         <div class="stock-alert-head">
           <strong>Stock alerts</strong>
@@ -123,21 +133,21 @@
         </div>
 
         <nav class="nav-list">
-          <button class="nav-btn active" data-panel="dashboard">Dashboard</button>
-          <button class="nav-btn" data-panel="pos">POS</button>
-          <button class="nav-btn" data-panel="menu">Front Store</button>
-          <button class="nav-btn" data-panel="inventory">Inventory &amp; Store</button>
-          <button class="nav-btn" data-panel="leftover">Leftover</button>
-          <button class="nav-btn" data-panel="promos">Promos &amp; Discount</button>
-          <button class="nav-btn" data-panel="orders">Orders</button>
-          <button class="nav-btn" data-panel="bookorders">Book Orders</button>
-          <button class="nav-btn hidden" data-panel="tables">Tables</button>
-          <button class="nav-btn hidden" data-panel="kitchen">Kitchen</button>
-          <button class="nav-btn hidden" data-panel="purchaseorders">Purchase orders</button>
-          <button class="nav-btn" data-panel="reports">Reports</button>
-          <button class="nav-btn" data-panel="audit">Audit trail</button>
-          <button class="nav-btn" data-panel="settings">Settings</button>
-          <button class="nav-btn shift-nav-btn" id="shift-nav-btn" onclick="requestShiftAccess()">Shifts</button>
+          <button class="nav-btn active" data-panel="dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span>Dashboard</span></button>
+          <button class="nav-btn" data-panel="pos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg><span>POS</span></button>
+          <button class="nav-btn" data-panel="orders"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 12h6"/><path d="M9 16h6"/></svg><span>Sales History</span></button>
+          <button class="nav-btn" data-panel="menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg><span>Front Store</span></button>
+          <button class="nav-btn" data-panel="inventory"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.27 6.96 12 12.01l8.73-5.05"/><path d="M12 22.08V12"/></svg><span>Inventory &amp; Store</span></button>
+          <button class="nav-btn hidden" data-panel="purchaseorders"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 3h15v13H1z"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg><span>Purchase orders</span></button>
+          <button class="nav-btn" data-panel="leftover"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h10"/><path d="M17 3l4 4-4 4"/><path d="M3 17h10"/><path d="M7 13l-4 4 4 4"/></svg><span>Leftover</span></button>
+          <button class="nav-btn" data-panel="promos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg><span>Promos &amp; Discount</span></button>
+          <button class="nav-btn" data-panel="bookorders"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg><span>Book Orders</span></button>
+          <button class="nav-btn hidden" data-panel="tables"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span>Tables</span></button>
+          <button class="nav-btn hidden" data-panel="kitchen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg><span>Kitchen</span></button>
+          <button class="nav-btn" data-panel="reports"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg><span>Reports</span></button>
+          <button class="nav-btn shift-nav-btn" id="shift-nav-btn" data-panel="shift"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>Shifts</span></button>
+          <button class="nav-btn" data-panel="audit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/></svg><span>Audit trail</span></button>
+          <button class="nav-btn" data-panel="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>Settings</span></button>
         </nav>
 
         <div class="user-box">
@@ -145,9 +155,18 @@
           <div>
             <div id="user-name">Admin</div>
             <small id="user-role">Owner</small>
+            <small class="user-system" id="user-system">System 1</small>
           </div>
         </div>
 
+        <div class="stock-alert-bell hidden" id="stock-alert-bell" onclick="toggleStockAlertPanel()" title="Stock alerts">
+          <span class="bell-icon">🔔</span>
+          <span class="stock-alert-badge" id="stock-alert-badge">0</span>
+        </div>
+        <button class="theme-toggle-btn hidden" id="theme-toggle-btn" onclick="toggleTheme()" title="Toggle dark / light mode" aria-label="Toggle dark or light mode">
+          <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+          <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+        </button>
         <button class="logout-btn" onclick="logout()">Logout</button>
       </aside>
 
@@ -166,9 +185,9 @@
           </div>
           <div id="dashboard-stats" class="stats-grid"></div>
           <div class="charts-grid">
-            <div class="card-panel">
+            <div class="card-panel revenue-card">
               <div class="chart-head">
-                <h3>Revenue trend — last 7 days</h3>
+                <h3><span class="chart-title-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></svg></span>Revenue trend <em>last 7 days</em></h3>
                 <span class="chart-sub" id="bar-chart-summary"></span>
               </div>
               <div id="target-progress"></div>
@@ -192,6 +211,13 @@
               <div id="recent-orders-list" class="mini-list"></div>
             </div>
           </div>
+          <div class="card-panel connected-systems-card hidden" id="connected-systems-card">
+            <div class="chart-head">
+              <h3>Connected systems</h3>
+              <span class="chart-sub" id="connected-systems-count"></span>
+            </div>
+            <div id="connected-systems" class="connected-systems-grid"></div>
+          </div>
         </section>
 
         <section id="pos-panel" class="panel">
@@ -207,6 +233,10 @@
                   </button>
                 </div>
                 <div class="menu-area-actions">
+                  <button id="client-display-btn" class="category-edit-btn hidden" onclick="openClientDisplay()" title="Open customer-facing display" aria-label="Open client display">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+                    <span>Client display</span>
+                  </button>
                   <button id="category-edit-btn" class="category-edit-btn" onclick="toggleCategoryEdit()" title="Edit menu order" aria-label="Edit menu order">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 7h8M8 12h8M8 17h5"/><path d="m18 20 2-2-4-4-2 2 4 4Z"/></svg>
                     <span>Edit order</span>
@@ -415,6 +445,12 @@
               <span class="eyebrow">Store</span>
               <h2>Inventory management</h2>
             </div>
+            <div class="inv-branch-filter-wrap hidden" id="inv-branch-filter-wrap">
+              <label for="inventory-branch-filter">Branch</label>
+              <select id="inventory-branch-filter" onchange="setInventoryBranchFilter(this.value)">
+                <option value="">All branches</option>
+              </select>
+            </div>
           </div>
 
           <div id="inventory-summary" class="inventory-summary"></div>
@@ -462,6 +498,11 @@
                 </span>
               </div>
               <input type="file" id="inventory-import-input" accept=".csv" class="hidden" onchange="handleInventoryImport(event)" />
+            </div>
+            <div class="field-group stacked hidden" id="inventory-import-branch-field">
+              <label>Import to branch</label>
+              <select id="inventory-import-branch"><option value="">All branches</option></select>
+              <p class="form-hint">Pick the branch this CSV's products &amp; prices go to. Choose "All branches" to keep items as shared stock.</p>
             </div>
           </div>
 
@@ -523,6 +564,13 @@
                   <input id="stock-expiry" type="date" />
                 </div>
               </div>
+              <div class="field-group hidden" id="stock-branch-field">
+                <label>Branch</label>
+                <div class="input-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M10 21v-6h4v6"/></svg>
+                  <select id="stock-branch"><option value="">All branches</option></select>
+                </div>
+              </div>
               <button type="submit" class="primary-btn add-stock-btn">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
                 <span>Add stock</span>
@@ -541,6 +589,7 @@
             </div>
             <div class="card-actions">
               <button class="action-btn primary" onclick="openPurchaseModal()">Record purchase</button>
+              <button class="action-btn secondary" onclick="openSuppliersModal()">Suppliers</button>
             </div>
             <div id="purchases-list" class="mini-list"></div>
           </div>
@@ -683,9 +732,8 @@
           <div class="panel-head">
             <div>
               <span class="eyebrow">Sales</span>
-              <h2>Order history</h2>
+              <h2>Sales history</h2>
             </div>
-            <span class="live-pill" id="orders-live-pill">● Live</span>
           </div>
           <div id="orders-stats" class="stats-grid"></div>
           <div class="card-panel closing-card">
@@ -796,20 +844,26 @@
             <button class="report-tab active" data-report="sales">Sales report</button>
             <button class="report-tab" data-report="invoice">Invoicing report</button>
             <button class="report-tab" data-report="summary">Summary sales report</button>
+            <button class="report-tab" data-report="totals">Total analysis</button>
             <button class="report-tab" data-report="analysis">Sales analysis report</button>
             <button class="report-tab" data-report="inventory">Inventory report</button>
             <button class="report-tab" data-report="menu">Front store report</button>
-            <button class="report-tab" data-report="orders">Orders report</button>
+            <button class="report-tab" data-report="orders">Sales History report</button>
             <button class="report-tab" data-report="bookorders">Book orders report</button>
             <button class="report-tab" data-report="tax">VAT / TAX report</button>
             <button class="report-tab" data-report="payments">Payments report</button>
             <button class="report-tab" data-report="stock">Stock-in report</button>
             <button class="report-tab" data-report="products">Product sold report</button>
             <button class="report-tab" data-report="daily">Daily sales report</button>
+            <button class="report-tab" data-report="weekly">Weekly report</button>
             <button class="report-tab" data-report="transactions">Transaction count report</button>
             <button class="report-tab" data-report="customers">Customer report</button>
             <button class="report-tab" data-report="refunds">Refund report</button>
             <button class="report-tab" data-report="purchases">Purchases report</button>
+            <button class="report-tab" data-report="profit">Menu profitability</button>
+            <button class="report-tab" data-report="valuation">Stock valuation</button>
+            <button class="report-tab" data-report="profitloss">Profit &amp; loss</button>
+            <button class="report-tab" data-report="suppliers">Suppliers report</button>
             <button class="report-tab" data-report="closings">Daily closing report</button>
             <button class="report-tab" data-report="price">Price change report</button>
             <button class="report-tab" data-report="shift">Shift report</button>
@@ -823,6 +877,7 @@
             <button class="report-tab hidden" data-report="tips">Tips &amp; service charge report</button>
             <button class="report-tab hidden" data-report="purchaseorders">Purchase orders report</button>
             <button class="report-tab hidden" data-report="branches">Branch sales report</button>
+            <button class="report-tab" data-report="systems">System sales report</button>
             <button class="report-tab hidden" data-report="receipts">Receipts sent report</button>
           </div>
 
@@ -885,6 +940,64 @@
           </div>
           <div id="purchase-orders-view"></div>
         </section>
+
+        <section id="shift-panel" class="panel">
+      <div class="panel-head">
+        <div>
+          <span class="eyebrow">Shifts</span>
+          <h2>Shift management</h2>
+          <p class="panel-sub">Open today's shifts so cashiers can sell. End a shift when the period is done.</p>
+        </div>
+      </div>
+
+      <div class="card-panel">
+        <div class="card-title-row">
+          <span class="card-icon red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="M8 14h4"/></svg></span>
+          <div>
+            <h3>Today's shifts</h3>
+            <p>Configure shift times and open them for today.</p>
+          </div>
+        </div>
+
+        <div class="shift-config">
+          <div class="shift-config-row">
+            <label class="shift-enable" title="Enable the morning shift">
+              <input type="checkbox" id="shift-morning-enabled" checked />
+              <span class="shift-config-name">Morning</span>
+            </label>
+            <div class="shift-time-pair">
+              <label>Starts</label>
+              <input id="shift-morning-start" type="time" value="08:00" />
+            </div>
+            <div class="shift-time-pair">
+              <label>Ends</label>
+              <input id="shift-morning-end" type="time" value="14:00" />
+            </div>
+          </div>
+          <div class="shift-config-row">
+            <label class="shift-enable" title="Enable the afternoon shift">
+              <input type="checkbox" id="shift-afternoon-enabled" checked />
+              <span class="shift-config-name">Afternoon</span>
+            </label>
+            <div class="shift-time-pair">
+              <label>Starts</label>
+              <input id="shift-afternoon-start" type="time" value="14:00" />
+            </div>
+            <div class="shift-time-pair">
+              <label>Ends</label>
+              <input id="shift-afternoon-end" type="time" value="22:00" />
+            </div>
+          </div>
+        </div>
+
+        <div class="card-actions">
+          <button class="action-btn primary" onclick="saveTodayShifts()">Open today's shifts</button>
+        </div>
+
+        <div class="shift-list-head">Today's shifts</div>
+        <div id="today-shift-list" class="mini-list"></div>
+      </div>
+    </section>
 
         <section id="settings-panel" class="panel">
           <div class="panel-head">
@@ -989,13 +1102,6 @@
                     <option value="58mm">58mm</option>
                   </select>
                 </div>
-                <div class="field-group stacked">
-                  <label>Daily sales target (₦)</label>
-                  <div class="input-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M21 7v5h-5"/></svg>
-                    <input id="sales-target" type="number" min="0" step="100" placeholder="e.g. 50000" />
-                  </div>
-                </div>
                 <label class="toggle-row span-2">
                   <input type="checkbox" id="loyalty-enabled-toggle" />
                   <span class="toggle-box"></span>
@@ -1087,9 +1193,10 @@
                 </div>
                 <select id="new-user-role">
                   <option value="cashier">Cashier</option>
-                  <option value="kitchen">Kitchen</option>
+                  <option value="audit">Audit</option>
                   <option value="manager">Manager</option>
                   <option value="admin">Owner</option>
+                  <option value="superadmin">Super Admin</option>
                 </select>
                 <button class="action-btn primary" onclick="addUser()">Add user</button>
               </div>
@@ -1198,6 +1305,8 @@
                 <label class="reset-check"><input type="checkbox" value="closings" /> <span>Daily closings</span></label>
                 <label class="reset-check"><input type="checkbox" value="refunds" /> <span>Refunds</span></label>
                 <label class="reset-check"><input type="checkbox" value="priceHistory" /> <span>Price history</span></label>
+                <label class="reset-check"><input type="checkbox" value="bookOrders" /> <span>Book orders</span></label>
+                <label class="reset-check"><input type="checkbox" value="purchaseOrders" /> <span>Purchase orders</span></label>
               </div>
 
               <div class="reset-tools">
@@ -1208,6 +1317,42 @@
                 <button class="action-btn secondary" onclick="resetSelected()">Reset selected</button>
                 <button class="action-btn danger" onclick="factoryReset()">Factory reset</button>
               </div>
+            </div>
+
+            <div class="card-panel terminal-system-card">
+              <div class="card-title-row">
+                <span class="card-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8M12 18v3"/></svg></span>
+                <div>
+                  <h3>This terminal</h3>
+                  <p>Name this computer so sales and reports can be tracked per system (System 1, System 2, etc.).</p>
+                </div>
+              </div>
+              <div class="field-group stacked">
+                <label>System name</label>
+                <input id="terminal-system-input" type="text" placeholder="e.g. System 1" value="System 1" />
+                <p class="form-hint" id="terminal-ip-display">Detecting this machine's IP…</p>
+              </div>
+              <div class="system-presets">
+                <button type="button" onclick="setSystemPreset('System 1')">System 1</button>
+                <button type="button" onclick="setSystemPreset('System 2')">System 2</button>
+                <button type="button" onclick="setSystemPreset('System 3')">System 3</button>
+                <button type="button" onclick="setSystemPreset('System 4')">System 4</button>
+                <button type="button" onclick="setSystemPreset('System 5')">System 5</button>
+              </div>
+              <div class="card-actions">
+                <button class="action-btn primary" onclick="saveTerminalSystem()">Save system name</button>
+              </div>
+            </div>
+
+            <div class="card-panel hardware-card">
+              <div class="card-title-row">
+                <span class="card-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="12" rx="2"/><path d="M6 11h2M10 11h2M6 14h6"/><path d="M18 12h.01"/></svg></span>
+                <div>
+                  <h3>Hardware</h3>
+                  <p>Enable or disable the hardware connected to this terminal. Toggles apply immediately.</p>
+                </div>
+              </div>
+              <div id="hardware-list" class="fp-list"></div>
             </div>
 
             <div class="card-panel full-package-card">
@@ -1322,6 +1467,10 @@
               <input id="inv-edit-reorder" type="number" min="0" step="1" />
             </div>
           </div>
+          <div class="field-group stacked hidden" id="inv-edit-branch-field">
+            <label>Branch</label>
+            <select id="inv-edit-branch"><option value="">All branches</option></select>
+          </div>
           <div class="field-group stacked">
             <label>Expiry date (optional)</label>
             <input id="inv-edit-expiry" type="date" />
@@ -1408,46 +1557,6 @@
       </div>
     </div>
 
-    <div id="settings-auth-modal" class="modal hidden">
-      <div class="modal-card">
-        <div class="modal-head">
-          <h3>Authorize settings</h3>
-          <button class="close-btn" onclick="closeSettingsAuth()">×</button>
-        </div>
-        <div class="modal-body">
-          <p class="form-hint">Settings contain sensitive business data. Enter your password to continue.</p>
-          <div class="void-auth-box">
-            <input id="settings-auth-password" type="password" placeholder="Your password" autocomplete="off" onkeydown="if(event.key==='Enter'){confirmSettingsAuth();}" />
-            <div class="void-auth-error" id="settings-auth-error"></div>
-          </div>
-        </div>
-        <div class="modal-actions">
-          <button class="action-btn secondary" onclick="closeSettingsAuth()">Cancel</button>
-          <button class="action-btn primary" onclick="confirmSettingsAuth()">Unlock settings</button>
-        </div>
-      </div>
-    </div>
-
-    <div id="shift-auth-modal" class="modal hidden">
-      <div class="modal-card">
-        <div class="modal-head">
-          <h3>Authorize shifts</h3>
-          <button class="close-btn" onclick="closeShiftAuth()">×</button>
-        </div>
-        <div class="modal-body">
-          <p class="form-hint">Shift settings control who can sell and when. Enter your password to continue.</p>
-          <div class="void-auth-box">
-            <input id="shift-auth-password" type="password" placeholder="Your password" autocomplete="off" onkeydown="if(event.key==='Enter'){confirmShiftAuth();}" />
-            <div class="void-auth-error" id="shift-auth-error"></div>
-          </div>
-        </div>
-        <div class="modal-actions">
-          <button class="action-btn secondary" onclick="closeShiftAuth()">Cancel</button>
-          <button class="action-btn primary" onclick="confirmShiftAuth()">Unlock shifts</button>
-        </div>
-      </div>
-    </div>
-
     <div id="saved-orders-modal" class="modal hidden">
       <div class="modal-card">
         <div class="modal-head">
@@ -1470,7 +1579,7 @@
         </div>
 
         <div class="modal-body">
-          <p class="form-hint">All completed sales — invoice number, products sold and amount. Use Print to re-issue a receipt.</p>
+          <p class="form-hint">Today's completed sales — invoice number, products sold and amount. Use Print to re-issue a receipt.</p>
           <div class="table-wrap invoices-table-wrap">
             <table id="invoices-table">
               <thead>
@@ -1556,6 +1665,32 @@
 
           <div id="tips-section" class="hidden"></div>
           <div id="delivery-section" class="hidden"></div>
+
+          <div id="scale-section" class="hw-section hidden">
+            <div class="hw-section-head">
+              <span class="hw-icon">⚖️</span>
+              <strong>Electronic scale</strong>
+              <button type="button" class="action-btn secondary" onclick="readScaleWeight()">Read scale</button>
+            </div>
+            <div class="field-group stacked">
+              <label>Weight (kg)</label>
+              <input id="scale-weight" type="number" min="0" step="0.001" placeholder="0.000" autocomplete="off" />
+            </div>
+            <p class="form-hint">Weigh the item, then add it to the order using that quantity. Reading requires Chrome/Edge.</p>
+          </div>
+
+          <div id="card-reader-section" class="hw-section hidden">
+            <div class="hw-section-head">
+              <span class="hw-icon">💳</span>
+              <strong>Card reader</strong>
+              <button type="button" class="action-btn primary" onclick="openCardReaderPayment()">Take card payment</button>
+            </div>
+            <div class="field-group stacked">
+              <label>Approval code (manual)</label>
+              <input id="card-approval-code" type="text" placeholder="e.g. 6-digit auth code" autocomplete="off" />
+            </div>
+            <p class="form-hint">Uses the browser payment sheet when available, or record a manual approval code.</p>
+          </div>
         </div>
 
         <div class="modal-actions">
@@ -1679,57 +1814,6 @@
       </div>
     </div>
 
-    <div id="shift-modal" class="modal hidden">
-      <div class="modal-card">
-        <div class="modal-head">
-          <h3>Shifts</h3>
-          <button class="close-btn" onclick="closeShiftModal()">×</button>
-        </div>
-
-        <div class="modal-body">
-          <p class="form-hint">Open today's shifts so cashiers can start selling. End a shift when the period is done — the cashier will be signed out automatically.</p>
-
-          <div class="shift-config">
-            <div class="shift-config-row">
-              <label class="shift-enable" title="Enable the morning shift">
-                <input type="checkbox" id="shift-morning-enabled" checked />
-                <span class="shift-config-name">Morning</span>
-              </label>
-              <div class="shift-time-pair">
-                <label>Starts</label>
-                <input id="shift-morning-start" type="time" value="08:00" />
-              </div>
-              <div class="shift-time-pair">
-                <label>Ends</label>
-                <input id="shift-morning-end" type="time" value="14:00" />
-              </div>
-            </div>
-            <div class="shift-config-row">
-              <label class="shift-enable" title="Enable the afternoon shift">
-                <input type="checkbox" id="shift-afternoon-enabled" checked />
-                <span class="shift-config-name">Afternoon</span>
-              </label>
-              <div class="shift-time-pair">
-                <label>Starts</label>
-                <input id="shift-afternoon-start" type="time" value="14:00" />
-              </div>
-              <div class="shift-time-pair">
-                <label>Ends</label>
-                <input id="shift-afternoon-end" type="time" value="22:00" />
-              </div>
-            </div>
-          </div>
-
-          <div class="modal-actions">
-            <button class="action-btn primary" onclick="saveTodayShifts()">Open today's shifts</button>
-          </div>
-
-          <div class="shift-list-head">Today's shifts</div>
-          <div id="today-shift-list" class="mini-list"></div>
-        </div>
-      </div>
-    </div>
-
     <div id="leftover-popover" class="leftover-pop hidden">
       <div class="leftover-pop-title" id="leftover-popover-title">Return product</div>
       <div class="leftover-pop-row">
@@ -1825,6 +1909,16 @@
         <div class="modal-body">
           <p class="form-hint"><span id="closing-date"></span> · <strong id="closing-sales-count"></strong> · Expected total <strong id="closing-total"></strong></p>
           <div id="closing-methods" class="closing-methods"></div>
+          <div class="closing-summary">
+            <div class="closing-summary-row">
+              <span>Counted total</span>
+              <strong id="closing-counted">₦0</strong>
+            </div>
+            <div class="closing-summary-row closing-diff" id="closing-diff-row">
+              <span id="closing-diff-label">Difference</span>
+              <strong id="closing-diff">₦0</strong>
+            </div>
+          </div>
           <div class="void-auth-error" id="closing-error"></div>
         </div>
         <div class="modal-actions">
@@ -1845,7 +1939,8 @@
           <div class="edit-grid">
             <div class="field-group stacked">
               <label>Supplier</label>
-              <input id="purchase-supplier" type="text" placeholder="e.g. Chico Farms" />
+              <input id="purchase-supplier" type="text" placeholder="e.g. Chico Farms" list="suppliers-datalist" autocomplete="off" />
+              <datalist id="suppliers-datalist"></datalist>
             </div>
             <div class="field-group stacked">
               <label>Note (optional)</label>
@@ -1869,45 +1964,91 @@
       </div>
     </div>
 
-    <div id="book-order-modal" class="modal hidden">
-      <div class="modal-card bookorder-card">
+    <div id="suppliers-modal" class="modal hidden">
+      <div class="modal-card">
         <div class="modal-head">
-          <h3 id="book-order-modal-title">New book order</h3>
-          <button class="close-btn" onclick="closeBookOrderModal()">×</button>
+          <h3>Supplier master</h3>
+          <button class="close-btn" onclick="closeSuppliersModal()">×</button>
         </div>
         <div class="modal-body">
-          <div class="bookorder-invoice-strip">
-            <span>Invoice</span>
-            <strong id="book-order-invoice-display">Auto</strong>
+          <p class="form-hint">Keep a supplier directory. Suppliers are linked to purchases and reporting.</p>
+          <div class="edit-grid">
+            <div class="field-group stacked">
+              <label>Name</label>
+              <input id="supplier-name" type="text" placeholder="e.g. Chico Farms" />
+            </div>
+            <div class="field-group stacked">
+              <label>Phone</label>
+              <input id="supplier-phone" type="text" placeholder="Phone number" />
+            </div>
+            <div class="field-group stacked">
+              <label>Email</label>
+              <input id="supplier-email" type="text" placeholder="Email" />
+            </div>
+            <div class="field-group stacked">
+              <label>Address</label>
+              <input id="supplier-address" type="text" placeholder="Address" />
+            </div>
           </div>
-
-          <label class="pay-method-label">Order source</label>
-          <div class="fp-order-types">
-            <label class="fp-order-type"><input type="radio" name="book-order-source" value="online" checked onchange="bookOrderToggleFields()" /> <span>🌐 Online book order</span></label>
-            <label class="fp-order-type"><input type="radio" name="book-order-source" value="personal" onchange="bookOrderToggleFields()" /> <span>🤝 Personal book order</span></label>
+          <div class="modal-actions supplier-add-actions">
+            <button class="action-btn primary" onclick="addSupplier()">Add supplier</button>
           </div>
+          <div id="suppliers-list" class="mini-list"></div>
+        </div>
+      </div>
+    </div>
 
-          <label class="pay-method-label">Order category</label>
-          <div class="fp-order-types">
-            <label class="fp-order-type"><input type="radio" name="book-order-category" value="cake" checked onchange="bookOrderToggleFields()" /> <span>🎂 Cakes order</span></label>
-            <label class="fp-order-type"><input type="radio" name="book-order-category" value="other" onchange="bookOrderToggleFields()" /> <span>📦 Other order</span></label>
-          </div>
+    <div id="book-order-modal" class="book-order-page hidden">
+      <header class="book-order-page-head">
+        <div class="book-order-page-title">
+          <span class="eyebrow">Book Orders</span>
+          <h2 id="book-order-modal-title">New book order</h2>
+          <p class="panel-head-sub">Create or update a book order — cake details, customer info and products.</p>
+        </div>
+        <div class="bookorder-invoice-strip">
+          <span>Invoice</span>
+          <strong id="book-order-invoice-display">Auto</strong>
+        </div>
+        <button class="close-btn" onclick="closeBookOrderModal()" aria-label="Close">×</button>
+      </header>
 
-          <div id="book-order-cake-section">
-            <label class="pay-method-label">Cake details</label>
-            <div class="edit-grid">
-              <div class="field-group stacked">
-                <label>Cake type</label>
-                <select id="book-order-cake-type" onchange="bookOrderCakeSelected()"></select>
+      <div class="book-order-page-body">
+        <section class="book-order-section">
+          <h4><span class="book-order-section-icon">📦</span> Order details</h4>
+          <div class="book-order-section-grid">
+            <div class="book-order-source-block">
+              <label class="pay-method-label">Order source</label>
+              <div class="fp-order-types">
+                <label class="fp-order-type"><input type="radio" name="book-order-source" value="online" checked onchange="bookOrderToggleFields()" /> <span>🌐 Online book order</span></label>
+                <label class="fp-order-type"><input type="radio" name="book-order-source" value="personal" onchange="bookOrderToggleFields()" /> <span>🤝 Personal book order</span></label>
               </div>
-              <div class="field-group stacked">
-                <label>Cake price (₦)</label>
-                <input id="book-order-cake-price" type="number" min="0" step="50" oninput="bookOrderCakePriceChanged()" />
+            </div>
+            <div>
+              <label class="pay-method-label">Order category</label>
+              <div class="fp-order-types">
+                <label class="fp-order-type"><input type="radio" name="book-order-category" value="cake" checked onchange="bookOrderToggleFields()" /> <span>🎂 Cakes order</span></label>
+                <label class="fp-order-type"><input type="radio" name="book-order-category" value="other" onchange="bookOrderToggleFields()" /> <span>📦 Other order</span></label>
               </div>
             </div>
           </div>
+        </section>
 
-          <label class="pay-method-label">Customer details</label>
+        <section class="book-order-section" id="book-order-cake-section">
+          <h4><span class="book-order-section-icon">🎂</span> Cake details</h4>
+          <div class="edit-grid">
+            <div class="field-group stacked">
+              <label>Cake type</label>
+              <select id="book-order-cake-type" onchange="bookOrderCakeSelected()"></select>
+            </div>
+            <div class="field-group stacked">
+              <label>Cake price (₦)</label>
+              <input id="book-order-cake-price" type="number" min="0" step="50" oninput="bookOrderCakePriceChanged()" />
+            </div>
+          </div>
+        </section>
+
+        <section class="book-order-section">
+          <h4><span class="book-order-section-icon">👤</span> Customer details</h4>
           <div class="edit-grid">
             <div class="field-group stacked">
               <label>Customer name</label>
@@ -1922,28 +2063,43 @@
               <input id="book-order-address" type="text" placeholder="Delivery / pickup address" />
             </div>
           </div>
+        </section>
 
-          <label class="pay-method-label">Products for this order</label>
+        <section class="book-order-section">
+          <h4><span class="book-order-section-icon">🛒</span> Products for this order</h4>
           <div class="book-order-products">
-            <div class="report-search-box">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-              <input id="book-order-product-search" type="text" placeholder="Search products to add…" oninput="renderBookOrderProductPicker(this.value)" />
+            <div class="book-order-add-row">
+              <select id="book-order-product-select" onchange="bookOrderProductSelectChanged()"></select>
+              <button class="action-btn primary" onclick="addSelectedBookOrderProduct()">Add product</button>
             </div>
-            <div id="book-order-product-picker" class="mini-list"></div>
             <div id="book-order-items" class="mini-list"></div>
           </div>
+        </section>
 
+        <section class="book-order-section">
+          <h4><span class="book-order-section-icon">💳</span> Payment &amp; collection</h4>
           <div class="edit-grid">
             <div class="field-group stacked">
               <label>Part payment (₦)</label>
               <input id="book-order-part-payment" type="number" min="0" step="50" oninput="bookOrderUpdateTotals()" />
             </div>
             <div class="field-group stacked">
+              <label>Part payment method / bank</label>
+              <select id="book-order-part-bank"></select>
+            </div>
+            <div class="field-group stacked">
+              <label>Full payment (₦)</label>
+              <input id="book-order-full-payment-amount" type="number" min="0" step="50" oninput="bookOrderUpdateTotals()" />
+            </div>
+            <div class="field-group stacked">
+              <label>Full payment method / bank</label>
+              <select id="book-order-bank"></select>
+            </div>
+            <div class="field-group stacked">
               <label>Date of collection</label>
               <input id="book-order-collection-date" type="date" />
             </div>
           </div>
-
           <div class="book-order-totals">
             <div class="book-order-total-row">
               <span>Total amount</span>
@@ -1954,16 +2110,70 @@
               <strong id="book-order-part-payment-display">₦0</strong>
             </div>
             <div class="book-order-total-row">
+              <span>Full payment</span>
+              <strong id="book-order-full-payment-display">₦0</strong>
+            </div>
+            <div class="book-order-total-row">
               <span>Balance due</span>
               <strong id="book-order-balance">₦0</strong>
             </div>
           </div>
           <div class="void-auth-error" id="book-order-error"></div>
+        </section>
+      </div>
+
+      <footer class="book-order-page-foot">
+        <button class="action-btn secondary" onclick="closeBookOrderModal()">Cancel</button>
+        <button class="action-btn primary" onclick="saveBookOrder()">Save order</button>
+      </footer>
+    </div>
+
+    <div id="book-order-collect-modal" class="modal hidden">
+      <div class="modal-card">
+        <div class="modal-head">
+          <h3>Confirm collection</h3>
+          <button class="close-btn" onclick="closeBookOrderCollectModal()">×</button>
+        </div>
+        <div class="modal-body">
+          <p class="form-hint">The cake is ready for pick-up. Confirm the invoice number and enter the balance received now before marking this order as collected.</p>
+          <div id="book-order-collect-summary" class="book-order-collect-summary"></div>
+          <div class="field-group">
+            <label for="book-order-collect-invoice">Invoice number</label>
+            <input id="book-order-collect-invoice" type="text" placeholder="e.g. INV-0001" autocomplete="off" />
+          </div>
+          <div class="field-group">
+            <label for="book-order-collect-balance">Balance received now</label>
+            <input id="book-order-collect-balance" type="number" min="0" step="50" placeholder="0" />
+          </div>
+          <div class="field-group">
+            <label for="book-order-collect-bank">Payment method / bank</label>
+            <select id="book-order-collect-bank"></select>
+          </div>
+          <div class="void-auth-error" id="book-order-collect-error"></div>
         </div>
         <div class="modal-actions">
-          <button class="action-btn secondary" onclick="closeBookOrderModal()">Cancel</button>
-          <button class="action-btn primary" onclick="saveBookOrder()">Save order</button>
+          <button class="action-btn secondary" onclick="closeBookOrderCollectModal()">Cancel</button>
+          <button class="action-btn success" onclick="confirmCollectBookOrder()">Confirm collected</button>
         </div>
+      </div>
+    </div>
+
+    <div id="float-keyboard" class="float-keyboard hidden">
+      <div class="fk-grid">
+        <button type="button" class="fk-btn" onclick="floatKey('1')">1</button>
+        <button type="button" class="fk-btn" onclick="floatKey('2')">2</button>
+        <button type="button" class="fk-btn" onclick="floatKey('3')">3</button>
+        <button type="button" class="fk-btn" onclick="floatKey('4')">4</button>
+        <button type="button" class="fk-btn" onclick="floatKey('5')">5</button>
+        <button type="button" class="fk-btn" onclick="floatKey('6')">6</button>
+        <button type="button" class="fk-btn" onclick="floatKey('7')">7</button>
+        <button type="button" class="fk-btn" onclick="floatKey('8')">8</button>
+        <button type="button" class="fk-btn" onclick="floatKey('9')">9</button>
+        <button type="button" class="fk-btn fk-op" onclick="floatKey('clear')">C</button>
+        <button type="button" class="fk-btn" onclick="floatKey('0')">0</button>
+        <button type="button" class="fk-btn fk-op" onclick="floatKey('back')">⌫</button>
+        <button type="button" class="fk-btn fk-wide" onclick="floatKey('.')">.</button>
+        <button type="button" class="fk-btn fk-done" onclick="floatKeyboardClose()">Done</button>
       </div>
     </div>
 
