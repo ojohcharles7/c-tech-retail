@@ -24,7 +24,8 @@ const STORAGE_KEYS = {
   recovery: 'ff_recovery',
   purchaseOrders: 'ff_purchase_orders',
   bookOrders: 'ff_book_orders',
-  suppliers: 'ff_suppliers'
+  suppliers: 'ff_suppliers',
+  grns: 'ff_grns'
 };
 
 const defaultUsers = [
@@ -71,10 +72,11 @@ const defaultSettings = {
   loyaltyPointsPer100: 1,
   loyaltyPointValue: 1,
   features: {
-    tables: false, kitchen: false, delivery: false, modifiers: false, tips: false,
+    tables: false, kitchen: false, delivery: false, modifiers: false, tips: false, waiters: false,
     reorder: false, photos: true, online: false, branches: false, receipts: false
   },
   tables: [],
+  waiters: [],
   branches: [],
   currentBranch: '',
   deliveryFee: 0,
@@ -280,6 +282,7 @@ function initStorage() {
   ensure(STORAGE_KEYS.purchaseOrders, []);
   ensure(STORAGE_KEYS.bookOrders, []);
   ensure(STORAGE_KEYS.suppliers, []);
+  ensure(STORAGE_KEYS.grns, []);
 }
 
 function getFromStorage(key) {
@@ -793,7 +796,7 @@ function showPanel(panelName) {
   if (panelName === 'dashboard') renderDashboard();
   if (panelName === 'pos') renderPOS();
   if (panelName === 'menu') { menuPage = 1; renderMenuManager(); }
-  if (panelName === 'inventory') { inventoryPage = 1; renderInventoryManager(); renderPurchaseList(); }
+  if (panelName === 'inventory') { inventoryPage = 1; renderInventoryManager(); renderPurchaseList(); renderGrnList(); }
   if (panelName === 'leftover') { leftoverPage = 1; renderLeftoverManager(); }
   if (panelName === 'promos') renderPromosManager();
   if (panelName === 'orders') { ordersPage = 1; renderOrdersManager(); renderClosingsList(); }
@@ -2339,6 +2342,10 @@ function buildSaleMeta() {
   if (getFeature('tables')) {
     meta.table = cartTable || null;
   }
+  if (getFeature('waiters')) {
+    const waiterInput = document.getElementById('waiter-name');
+    if (waiterInput) meta.waiter = waiterInput.value.trim() || null;
+  }
   if (getFeature('tips')) {
     const raw = getCartSubtotal();
     const taxable = Math.max(0, raw - getCartDiscountsTotal(raw));
@@ -2666,6 +2673,7 @@ function saveOrder() {
     savedOnly: true,
     serviceCharge: getCartServiceCharge(subtotal),
     deliveryFee: getCartDeliveryFee(),
+    kitchenStatus: getFeature('kitchen') ? 'pending' : undefined,
     ...buildSaleMeta()
   };
   if (cartCustomer) {
@@ -2684,6 +2692,66 @@ function saveOrder() {
   renderOrdersManager();
   showToast('Order saved.', 'success');
   logAudit('Order saved', `Invoice #${sale.invoice} · ${formatCurrency(sale.total)}`);
+}
+
+function sendToTable() {
+  if (!cartTable) {
+    showToast('Select a table first.', 'error');
+    return;
+  }
+  if (!cart.length) {
+    showToast('No items in cart. Add items first.', 'error');
+    return;
+  }
+  // Save order as savedOnly with table + waiter context; kitchen will start prepping
+  // We'll reuse saveOrder logic but override to force kitchenStatus and ensure table/waiter
+  const sales = getFromStorage(STORAGE_KEYS.sales);
+  const rawSubtotal = getCartSubtotal();
+  const promoAmt = getPromoDiscount(rawSubtotal);
+  const discAmt = getDiscountValue(rawSubtotal);
+  const discountTotal = promoAmt + discAmt;
+  const subtotal = Math.max(0, rawSubtotal - discountTotal);
+  const tax = subtotal * (getTaxRate() / 100);
+  const sale = {
+    id: Date.now(),
+    invoice: getNextInvoiceNumber(sales),
+    rawSubtotal,
+    subtotal,
+    tax,
+    discountTotal: promoAmt + discAmt,
+    promo: appliedPromo ? { id: appliedPromo.id, name: appliedPromo.name, type: appliedPromo.type, value: appliedPromo.value, amount: promoAmt } : null,
+    discount: appliedDiscount ? { id: appliedDiscount.id, name: appliedDiscount.name, type: appliedDiscount.type, value: appliedDiscount.value, amount: discAmt } : null,
+    total: getCurrentTotal(),
+    paid: getCurrentTotal(),
+    change: 0,
+    cashier: currentUser?.name || 'Cashier',
+    payments: [],
+    items: cart.map((entry) => ({ id: entry.id, name: entry.name, qty: entry.qty, price: entry.price, optionsPrice: entry.optionsPrice || 0, options: entry.options || [], note: entry.note || '' })),
+    createdAt: new Date().toISOString(),
+    savedOnly: true,
+    serviceCharge: getCartServiceCharge(subtotal),
+    deliveryFee: getCartDeliveryFee(),
+    kitchenStatus: getFeature('kitchen') ? 'pending' : undefined,
+    table: cartTable,
+    ...buildSaleMeta()
+  };
+  if (cartCustomer) {
+    sale.customerId = cartCustomer.id;
+    sale.customerName = cartCustomer.name;
+    sale.customerPhone = cartCustomer.phone;
+    sale.customerEmail = cartCustomer.email || '';
+  }
+
+  sales.push(sale);
+  writeToStorage(STORAGE_KEYS.sales, sales);
+  cart = [];
+  cartCustomer = null;
+  cartLoyaltyPoints = 0;
+  renderCart();
+  renderDashboard();
+  renderOrdersManager();
+  showToast('Order sent to table. Kitchen started.', 'success');
+  logAudit('Order sent to table', `Invoice #${sale.invoice} · Table ${cartTable} · ${formatCurrency(sale.total)}`);
 }
 
 function openSavedOrdersModal() {
@@ -3429,29 +3497,62 @@ function renderInventorySummary() {
   const totalItems = inventory.length;
   const totalUnits = inventory.reduce((sum, item) => sum + (Number(item.stock) || 0), 0);
   const lowStock = inventory.filter((item) => item.stock <= item.reorderLevel).length;
-  const stockValue = inventory.reduce((sum, item) => sum + (Number(item.stock) || 0) * (Number(item.price) || 0), 0);
+  const outStock = inventory.filter((item) => Number(item.stock) <= 0).length;
+  const stockValue = inventory.reduce((sum, item) => sum + (Number(item.stock) || 0) * getInventoryCost(item), 0);
+  const expiringSoon = inventory.filter((item) => {
+    if (!item.expiryDate) return false;
+    const days = (new Date(item.expiryDate) - new Date()) / 86400000;
+    return days >= 0 && days <= 7;
+  }).length;
 
   const summaryEl = document.getElementById('inventory-summary');
   if (!summaryEl) return;
 
   summaryEl.innerHTML = `
-    <div class="inv-stat">
+    <div class="inv-stat tone-blue">
       <span class="inv-stat-label">Products</span>
       <strong>${totalItems}</strong>
     </div>
-    <div class="inv-stat">
+    <div class="inv-stat tone-green">
       <span class="inv-stat-label">Units in stock</span>
       <strong>${totalUnits.toLocaleString()}</strong>
     </div>
-    <div class="inv-stat">
-      <span class="inv-stat-label">Low stock</span>
-      <strong class="${lowStock ? 'danger' : ''}">${lowStock}</strong>
-    </div>
-    <div class="inv-stat">
+    <div class="inv-stat tone-violet">
       <span class="inv-stat-label">Stock value</span>
       <strong>${formatCurrency(stockValue)}</strong>
     </div>
+    <div class="inv-stat tone-amber">
+      <span class="inv-stat-label">Low stock</span>
+      <strong class="${lowStock ? 'danger' : ''}">${lowStock}</strong>
+    </div>
+    <div class="inv-stat tone-red">
+      <span class="inv-stat-label">Out of stock</span>
+      <strong class="${outStock ? 'danger' : ''}">${outStock}</strong>
+    </div>
+    <div class="inv-stat tone-lemon">
+      <span class="inv-stat-label">Expiring soon</span>
+      <strong class="${expiringSoon ? 'danger' : ''}">${expiringSoon}</strong>
+    </div>
   `;
+}
+
+function renderStockActivity() {
+  const container = document.getElementById('stock-activity-list');
+  if (!container) return;
+  const log = getFromStorage(STORAGE_KEYS.stockLog).slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 8);
+  container.innerHTML = log.length
+    ? log.map((entry) => `
+      <div class="list-row">
+        <div class="mini-item">
+          <span class="mini-avatar">+</span>
+          <div>
+            <div>${escapeHtml(entry.itemName)} <strong class="text-danger">+${entry.qtyAdded}</strong></div>
+            <small>${new Date(entry.createdAt).toLocaleString()} · ${escapeHtml(entry.note || 'Stock in')} · ${escapeHtml(entry.user || '')}</small>
+          </div>
+        </div>
+      </div>
+    `).join('')
+    : '<div class="list-row"><div>No stock movements yet.</div><span class="badge info">New</span></div>';
 }
 
 function exportInventoryCSV() {
@@ -3685,6 +3786,10 @@ function renderInventoryManager() {
   const inventory = getInventoryForManager();
   renderInventorySummary();
   renderVoidedReturns();
+  renderStockActivity();
+
+  const countEl = document.getElementById('inventory-count');
+  if (countEl) countEl.textContent = `${inventory.length} item(s)`;
 
   const inventoryQuery = (document.getElementById('inventory-search')?.value || '').trim().toLowerCase();
   const flatItems = inventory.slice().sort((a, b) => {
@@ -3703,15 +3808,14 @@ function renderInventoryManager() {
   if (inventoryPage > totalPages) inventoryPage = totalPages;
   const pageItems = flatItems.slice((inventoryPage - 1) * LIST_PAGE_SIZE, inventoryPage * LIST_PAGE_SIZE);
 
-  const grouped = pageItems.reduce((acc, item) => {
-    const group = item.group || 'General';
-    if (!acc[group]) acc[group] = [];
-    acc[group].push(item);
-    return acc;
-  }, {});
-const groups = Object.entries(grouped).sort((a, b) => a[0].localeCompare(b[0]));
+  const viewSwitch = document.getElementById('inventory-view-switch');
+  if (viewSwitch) {
+    viewSwitch.querySelectorAll('.view-btn').forEach((btn) => {
+      btn.classList.toggle('active', btn.dataset.view === inventoryView);
+    });
+  }
 
-  document.getElementById('inventory-list').innerHTML = `
+  const toolbarHtml = `
 <div class="inventory-toolbar">
       <label class="check-all">
         <input type="checkbox" id="inventory-check-all" onchange="toggleInventoryCheckAll()" />
@@ -3739,8 +3843,104 @@ const groups = Object.entries(grouped).sort((a, b) => a[0].localeCompare(b[0]));
           <span>Delete marked</span>
         </button>
       </div>
-    </div>
-    ${groups.length
+    </div>`;
+
+  const itemState = (item) => {
+    const menuItem = getMenuItemForInventory(item.id);
+    const low = item.stock <= item.reorderLevel;
+    const critical = item.reorderLevel > 0 && item.stock <= Math.max(1, Math.floor(item.reorderLevel / 2));
+    const [avatarBg, avatarFg] = avatarColor(item.name);
+    const barPct = item.reorderLevel > 0 ? Math.min(Math.round((item.stock / (item.reorderLevel * 3)) * 100), 100) : null;
+    const stockClass = critical ? 'critical' : low ? 'low' : '';
+    return { menuItem, low, critical, avatarBg, avatarFg, barPct, stockClass };
+  };
+
+  const actionsHtml = (item, menuItem) => `
+    <div class="row-actions">
+      <button class="table-action edit" onclick="openInventoryEdit(${item.id})" title="Edit">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        <span>Edit</span>
+      </button>
+      <button class="table-action ${menuItem ? 'remove' : 'push'}" onclick="togglePushToMenu(${item.id})" title="${menuItem ? 'Remove from menu' : 'Push to menu'}">
+        ${menuItem
+          ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h2l2.4 12.2a1 1 0 0 0 1 .8h7.3a1 1 0 0 0 1-.8L19 9H6.4"/><circle cx="9.5" cy="20" r="1.3"/><circle cx="17.5" cy="20" r="1.3"/></svg><span>Remove from menu</span>'
+          : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h2l2.4 12.2a1 1 0 0 0 1 .8h7.3a1 1 0 0 0 1-.8L19 9H6.4"/><circle cx="9.5" cy="20" r="1.3"/><circle cx="17.5" cy="20" r="1.3"/><path d="M12.5 7V3"/><path d="M10.5 5h4"/></svg><span>Push to menu</span>'}
+      </button>
+      <button class="table-action danger" onclick="requestInventoryDelete(${item.id})" title="Delete">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6.5h16"/><path d="M9 6.5V4.5h6v2"/><path d="M6 6.5l.8 13h10.4l.8-13"/><path d="M10 10.5v5.5M14 10.5v5.5"/></svg>
+        <span>Delete</span>
+      </button>
+    </div>`;
+
+  const cardHtml = (item) => {
+    const s = itemState(item);
+    return `
+      <div class="inventory-card${s.low ? ' card-warn' : ''}">
+        <div class="inv-card-head">
+          <input type="checkbox" class="inventory-check" value="${item.id}" onchange="updateInventorySelection()" />
+          <span class="inv-avatar" style="background:${s.avatarBg};color:${s.avatarFg}">${escapeHtml(item.name.charAt(0).toUpperCase())}</span>
+          <div class="inv-card-name">
+            <strong>${escapeHtml(item.name)}${item.returnedFromLeftover ? ' <span class="returned-tag">Returned</span>' : ''}</strong>
+            <span>${escapeHtml(item.group || 'General')}${item.branch ? ` · ${escapeHtml(item.branch)}` : ''}</span>
+          </div>
+        </div>
+        <div class="inv-card-metrics">
+          <div class="inv-card-metric">
+            <span>Stock</span>
+            <strong class="${s.stockClass}">${item.stock} ${escapeHtml(item.unit || '')}</strong>
+            ${s.barPct === null ? '' : `<span class="stock-bar ${s.stockClass}"><i style="width:${s.barPct}%"></i></span>`}
+          </div>
+          <div class="inv-card-metric">
+            <span>Price</span>
+            <strong>${item.price ? formatCurrency(item.price) : '<span class="muted">—</span>'}</strong>
+          </div>
+        </div>
+        <div class="inv-card-meta">
+          <span class="menu-status ${s.menuItem ? 'on' : 'off'}"><i></i>${s.menuItem ? 'On Store' : 'Not pushed'}</span>
+          <span>${getExpiryBadge(item)}</span>
+        </div>
+        ${actionsHtml(item, s.menuItem)}
+      </div>`;
+  };
+
+  const listHtml = (item) => {
+    const s = itemState(item);
+    return `
+      <div class="inv-list-row${s.low ? ' row-warn' : ''}">
+        <input type="checkbox" class="inventory-check" value="${item.id}" onchange="updateInventorySelection()" />
+        <span class="inv-avatar" style="background:${s.avatarBg};color:${s.avatarFg}">${escapeHtml(item.name.charAt(0).toUpperCase())}</span>
+        <div class="inv-list-info">
+          <strong>${escapeHtml(item.name)}${item.returnedFromLeftover ? ' <span class="returned-tag">Returned</span>' : ''}</strong>
+          <span>${escapeHtml(item.group || 'General')}${item.branch ? ` · ${escapeHtml(item.branch)}` : ''}</span>
+        </div>
+        <div class="inv-list-stock">
+          <span class="stock-badge ${s.stockClass}">${item.stock}</span>
+          <small>${escapeHtml(item.unit || '')}</small>
+        </div>
+        <div class="inv-list-price">${item.price ? formatCurrency(item.price) : '<span class="muted">—</span>'}</div>
+        <div class="inv-list-menu"><span class="menu-status ${s.menuItem ? 'on' : 'off'}"><i></i>${s.menuItem ? 'On Store' : 'Not pushed'}</span></div>
+        ${actionsHtml(item, s.menuItem)}
+      </div>`;
+  };
+
+  let bodyHtml;
+  if (inventoryView === 'cards') {
+    bodyHtml = pageItems.length
+      ? `<div class="inventory-card-grid">${pageItems.map(cardHtml).join('')}</div>`
+      : '<div class="list-row"><div>No inventory items yet.</div></div>';
+  } else if (inventoryView === 'list') {
+    bodyHtml = pageItems.length
+      ? `<div class="inventory-list-view">${pageItems.map(listHtml).join('')}</div>`
+      : '<div class="list-row"><div>No inventory items yet.</div></div>';
+  } else {
+    const grouped = pageItems.reduce((acc, item) => {
+      const group = item.group || 'General';
+      if (!acc[group]) acc[group] = [];
+      acc[group].push(item);
+      return acc;
+    }, {});
+    const groups = Object.entries(grouped).sort((a, b) => a[0].localeCompare(b[0]));
+    bodyHtml = groups.length
       ? groups.map(([group, items]) => `
         <div class="inventory-group">
           <div class="inventory-group-head">
@@ -3766,51 +3966,30 @@ const groups = Object.entries(grouped).sort((a, b) => a[0].localeCompare(b[0]));
               </thead>
               <tbody>
                 ${items.map((item) => {
-                  const menuItem = getMenuItemForInventory(item.id);
-                  const low = item.stock <= item.reorderLevel;
-                  const critical = item.reorderLevel > 0 && item.stock <= Math.max(1, Math.floor(item.reorderLevel / 2));
-                  const [avatarBg, avatarFg] = avatarColor(item.name);
-                  const barPct = item.reorderLevel > 0 ? Math.min(Math.round((item.stock / (item.reorderLevel * 3)) * 100), 100) : null;
-                  const stockClass = critical ? 'critical' : low ? 'low' : '';
+                  const s = itemState(item);
                   return `
-                    <tr class="${low ? 'row-warn' : ''}">
+                    <tr class="${s.low ? 'row-warn' : ''}">
                       <td class="check-col"><input type="checkbox" class="inventory-check" value="${item.id}" onchange="updateInventorySelection()" /></td>
                       <td>
                         <div class="inv-item">
-                          <span class="inv-avatar" style="background:${avatarBg};color:${avatarFg}">${item.name.charAt(0).toUpperCase()}</span>
+                          <span class="inv-avatar" style="background:${s.avatarBg};color:${s.avatarFg}">${escapeHtml(item.name.charAt(0).toUpperCase())}</span>
                           <div class="inv-item-text">
-                            <strong>${item.name}${item.returnedFromLeftover ? ' <span class="returned-tag">Returned</span>' : ''}${item.branch ? ` <span class="branch-tag">${escapeHtml(item.branch)}</span>` : ''}</strong>
+                            <strong>${escapeHtml(item.name)}${item.returnedFromLeftover ? ' <span class="returned-tag">Returned</span>' : ''}${item.branch ? ` <span class="branch-tag">${escapeHtml(item.branch)}</span>` : ''}</strong>
                             <span>${item.id < 0 ? 'Imported' : ''}</span>
                           </div>
                         </div>
                       </td>
-                      <td><span class="unit-pill">${item.unit}</span></td>
+                      <td><span class="unit-pill">${escapeHtml(item.unit)}</span></td>
                       <td>
                         <div class="stock-cell">
-                          <span class="stock-badge ${stockClass}">${item.stock}</span>
-                          ${barPct === null ? '' : `<span class="stock-bar ${stockClass}"><i style="width:${barPct}%"></i></span>`}
+                          <span class="stock-badge ${s.stockClass}">${item.stock}</span>
+                          ${s.barPct === null ? '' : `<span class="stock-bar ${s.stockClass}"><i style="width:${s.barPct}%"></i></span>`}
                         </div>
                       </td>
                       <td>${getExpiryBadge(item)}</td>
                       <td class="price-cell">${item.price ? formatCurrency(item.price) : '<span class="muted">—</span>'}</td>
-                      <td>${menuItem ? '<span class="menu-status on"><i></i>On Store</span>' : '<span class="menu-status off"><i></i>Not pushed</span>'}</td>
-                      <td>
-                        <div class="row-actions">
-                          <button class="table-action edit" onclick="openInventoryEdit(${item.id})" title="Edit">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-                            <span>Edit</span>
-                          </button>
-                          <button class="table-action ${menuItem ? 'remove' : 'push'}" onclick="togglePushToMenu(${item.id})" title="${menuItem ? 'Remove from menu' : 'Push to menu'}">
-                            ${menuItem
-                              ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h2l2.4 12.2a1 1 0 0 0 1 .8h7.3a1 1 0 0 0 1-.8L19 9H6.4"/><circle cx="9.5" cy="20" r="1.3"/><circle cx="17.5" cy="20" r="1.3"/></svg><span>Remove from menu</span>'
-                              : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h2l2.4 12.2a1 1 0 0 0 1 .8h7.3a1 1 0 0 0 1-.8L19 9H6.4"/><circle cx="9.5" cy="20" r="1.3"/><circle cx="17.5" cy="20" r="1.3"/><path d="M12.5 7V3"/><path d="M10.5 5h4"/></svg><span>Push to menu</span>'}
-                          </button>
-                          <button class="table-action danger" onclick="requestInventoryDelete(${item.id})" title="Delete">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6.5h16"/><path d="M9 6.5V4.5h6v2"/><path d="M6 6.5l.8 13h10.4l.8-13"/><path d="M10 10.5v5.5M14 10.5v5.5"/></svg>
-                            <span>Delete</span>
-                          </button>
-                        </div>
-                      </td>
+                      <td>${s.menuItem ? '<span class="menu-status on"><i></i>On Store</span>' : '<span class="menu-status off"><i></i>Not pushed</span>'}</td>
+                      <td>${actionsHtml(item, s.menuItem)}</td>
                     </tr>
                   `;
                 }).join('')}
@@ -3819,9 +3998,19 @@ const groups = Object.entries(grouped).sort((a, b) => a[0].localeCompare(b[0]));
           </div>
         </div>
       `).join('')
-      : '<div class="list-row"><div>No inventory items yet.</div></div>'}
-  `;
+      : '<div class="list-row"><div>No inventory items yet.</div></div>';
+  }
+
+  document.getElementById('inventory-list').innerHTML = toolbarHtml + bodyHtml;
   renderListPagination('inventory-pagination', inventoryPage, totalPages, flatItems.length, 'changeInventoryPage', 'goToInventoryPage');
+}
+
+let inventoryView = localStorage.getItem('ff_inventory_view') || 'table';
+
+function setInventoryView(view) {
+  inventoryView = ['table', 'cards', 'list'].includes(view) ? view : 'table';
+  localStorage.setItem('ff_inventory_view', inventoryView);
+  renderInventoryManager();
 }
 
 function toggleInventoryCheckAll() {
@@ -4009,14 +4198,18 @@ function renderOrdersManager() {
   const averageOrder = sales.length ? totalRevenue / sales.length : 0;
 
   const statCards = [
-    { label: 'Total revenue', value: formatCurrency(totalRevenue) },
-    { label: 'Orders', value: sales.length },
-    { label: 'Items sold', value: totalItems },
-    { label: 'Average order', value: formatCurrency(averageOrder) }
+    { label: 'Total revenue', value: formatCurrency(totalRevenue), tone: 'red', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M21 7v5h-5"/></svg>' },
+    { label: 'Orders', value: sales.length, tone: 'blue', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5h12l1.5 17h-15z"/><path d="M9 8.5h6"/><path d="M9 12.5h6"/></svg>' },
+    { label: 'Items sold', value: totalItems, tone: 'green', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/></svg>' },
+    { label: 'Average order', value: formatCurrency(averageOrder), tone: 'amber', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6.5h16v11H4z"/><path d="M8 6.5v2.5h8V6.5"/><path d="M9 6.5V5h6v1.5"/></svg>' }
   ];
 
   document.getElementById('orders-stats').innerHTML = statCards.map((stat) => `
-    <div class="stat-card">
+    <div class="stat-card tone-${stat.tone}">
+      <div class="stat-top">
+        <div class="stat-icon">${stat.icon}</div>
+        <div class="stat-trend" aria-hidden="true"></div>
+      </div>
       <div class="stat-label">${stat.label}</div>
       <div class="stat-value">${stat.value}</div>
     </div>
@@ -4487,7 +4680,7 @@ const FEATURE_REPORT_TABS = {
   receipts: 'receipts'
 };
 
-const BASE_REPORT_TABS = ['sales', 'invoice', 'summary', 'totals', 'analysis', 'inventory', 'menu', 'orders', 'tax', 'payments', 'stock', 'products', 'daily', 'weekly', 'transactions', 'customers', 'refunds', 'purchases', 'closings', 'price', 'shift', 'void', 'leftover', 'promos', 'bookorders', 'systems', 'profit', 'valuation', 'profitloss', 'suppliers'];
+const BASE_REPORT_TABS = ['sales', 'invoice', 'summary', 'totals', 'analysis', 'inventory', 'menu', 'orders', 'tax', 'payments', 'stock', 'products', 'daily', 'weekly', 'transactions', 'customers', 'refunds', 'purchases', 'grns', 'closings', 'price', 'shift', 'void', 'leftover', 'promos', 'bookorders', 'systems', 'profit', 'valuation', 'profitloss', 'suppliers'];
 
 function getActiveReportTabs() {
   const features = getFeatures();
@@ -5358,6 +5551,44 @@ function buildReport(tab) {
     };
   }
 
+  if (tab === 'grns') {
+    const grns = getFromStorage(STORAGE_KEYS.grns);
+    const { start, end } = getReportDateRange();
+    const filtered = grns.filter((record) => {
+      const created = new Date(record.createdAt);
+      return created >= start && created <= end;
+    }).slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    const totalCost = filtered.reduce((sum, record) => sum + record.totalCost, 0);
+    const totalUnits = filtered.reduce((sum, record) => sum + record.lines.reduce((lineSum, line) => lineSum + line.qty, 0), 0);
+
+    return {
+      title: 'Goods received (GRN) report',
+      subtitle: `${filtered.length} GRN(s) · ${rangeLabel}`,
+      columns: [
+        { key: 'number', label: 'GRN' },
+        { key: 'date', label: 'Date & time' },
+        { key: 'supplier', label: 'Supplier' },
+        { key: 'reference', label: 'Reference' },
+        { key: 'lines', label: 'Lines' },
+        { key: 'units', label: 'Units' },
+        { key: 'receivedBy', label: 'Received by' },
+        { key: 'totalCost', label: 'Total cost', money: true }
+      ],
+      rows: filtered.map((record) => ({
+        number: record.number || '—',
+        date: new Date(record.createdAt).toLocaleString(),
+        supplier: record.supplier || '—',
+        reference: record.reference || '—',
+        lines: record.lines.length,
+        units: record.lines.reduce((sum, line) => sum + line.qty, 0),
+        receivedBy: record.receivedBy || '—',
+        totalCost: record.totalCost
+      })),
+      totals: { lines: filtered.length, units: totalUnits, totalCost }
+    };
+  }
+
   if (tab === 'profit') {
     const menu = getFromStorage(STORAGE_KEYS.menu);
     const rows = menu.map((item) => {
@@ -5910,12 +6141,24 @@ function buildReport(tab) {
     const sales = filterSalesByDate(getFromStorage(STORAGE_KEYS.sales)).filter((sale) => sale.table && !sale.savedOnly);
     const byTable = {};
     sales.forEach((sale) => {
-      if (!byTable[sale.table]) byTable[sale.table] = { table: sale.table, orders: 0, items: 0, total: 0 };
+      if (!byTable[sale.table]) byTable[sale.table] = { table: sale.table, orders: 0, items: 0, total: 0, itemNames: [] };
       byTable[sale.table].orders += 1;
       byTable[sale.table].items += sale.items.reduce((sum, item) => sum + item.qty, 0);
       byTable[sale.table].total += sale.total;
+// Collect item names and quantities (unique, up to 5 displayed)
+  sale.items.forEach((item => {
+    const existing = byTable[sale.table].itemNames.find((e) => e.name === item.name);
+    if (!existing) {
+      byTable[sale.table].itemNames.push({ name: item.name, qty: item.qty });
+    } else {
+      existing.qty += item.qty;
+    }
+  }));
     });
-    const rows = Object.values(byTable).sort((a, b) => b.total - a.total);
+    const rows = Object.values(byTable).sort((a, b) => b.total - a.total).map(row => ({
+      ...row,
+      itemDetails: row.itemNames.slice(0, 5).map((it, i) => `${it.name} ×${it.qty}${i > 0 ? ', ' : ''}`).join('') + (row.itemNames.length > 5 ? ` + ${row.itemNames.length - 5} more` : '')
+    }));
     return {
       title: 'Dine-in tables report',
       subtitle: `${rows.length} table(s) served · ${rangeLabel}`,
@@ -5923,6 +6166,7 @@ function buildReport(tab) {
         { key: 'table', label: 'Table' },
         { key: 'orders', label: 'Orders' },
         { key: 'items', label: 'Items' },
+        { key: 'itemDetails', label: 'Item detail' },
         { key: 'total', label: 'Revenue', money: true }
       ],
       rows,
@@ -6892,6 +7136,114 @@ function deleteSupplier(id) {
   logAudit('Supplier removed', target.name);
 }
 
+function getNextGrnNumber(grns) {
+  const max = grns.reduce((highest, grn) => Math.max(highest, Number(String(grn.number || '').replace(/\D/g, '')) || 0), 0);
+  return 'GRN-' + String(max + 1).padStart(4, '0');
+}
+
+function openGrnModal() {
+  const grns = getFromStorage(STORAGE_KEYS.grns);
+  document.getElementById('grn-number').textContent = getNextGrnNumber(grns);
+  document.getElementById('grn-date').textContent = new Date().toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+  document.getElementById('grn-supplier').value = '';
+  document.getElementById('grn-reference').value = '';
+  document.getElementById('grn-error').textContent = '';
+  refreshSuppliersDatalist();
+  renderGrnItems();
+  document.getElementById('grn-modal').classList.remove('hidden');
+}
+
+function closeGrnModal() {
+  document.getElementById('grn-modal').classList.add('hidden');
+}
+
+function renderGrnItems() {
+  const container = document.getElementById('grn-items');
+  if (!container) return;
+  const inventory = getInventoryForManager();
+  container.innerHTML = inventory.map((item) => `
+    <tr>
+      <td>${escapeHtml(item.name)}</td>
+      <td><input type="number" min="0" step="1" value="0" class="grn-qty" data-id="${item.id}" /></td>
+      <td><input type="number" min="0" step="0.01" value="${item.lastCost ?? item.price ?? ''}" class="grn-cost" data-id="${item.id}" /></td>
+    </tr>
+  `).join('');
+}
+
+function saveGrn() {
+  const number = document.getElementById('grn-number').textContent.trim();
+  const supplierName = document.getElementById('grn-supplier').value.trim();
+  const reference = document.getElementById('grn-reference').value.trim();
+  const errorEl = document.getElementById('grn-error');
+  if (!supplierName) { errorEl.textContent = 'Enter a supplier name.'; return; }
+  const supplier = registerSupplier(supplierName);
+
+  const lines = [];
+  document.querySelectorAll('#grn-items .grn-qty').forEach((input) => {
+    const qty = Math.floor(Number(input.value) || 0);
+    if (qty <= 0) return;
+    const cost = Number(document.querySelector(`.grn-cost[data-id="${input.dataset.id}"]`).value) || 0;
+    const item = getFromStorage(STORAGE_KEYS.inventory).find((entry) => entry.id === Number(input.dataset.id));
+    if (!item) return;
+    lines.push({ itemId: item.id, name: item.name, qty, cost });
+  });
+  if (!lines.length) { errorEl.textContent = 'Add at least one product with a received quantity.'; return; }
+
+  const totalCost = lines.reduce((sum, line) => sum + line.qty * line.cost, 0);
+  const grns = getFromStorage(STORAGE_KEYS.grns);
+  grns.push({
+    id: Date.now(),
+    number,
+    supplier: supplier ? supplier.name : supplierName,
+    supplierId: supplier ? supplier.id : null,
+    reference,
+    lines,
+    totalCost,
+    receivedBy: currentUser ? currentUser.name : 'System',
+    createdAt: new Date().toISOString()
+  });
+  writeToStorage(STORAGE_KEYS.grns, grns);
+
+  const inventory = getFromStorage(STORAGE_KEYS.inventory);
+  lines.forEach((line) => {
+    const item = inventory.find((entry) => entry.id === line.itemId);
+    if (item) {
+      item.stock = Number(item.stock) + line.qty;
+      item.lastCost = line.cost;
+    }
+  });
+  writeToStorage(STORAGE_KEYS.inventory, inventory);
+  lines.forEach((line) => logStockIn(line.name, line.qty, `GRN ${number}`));
+
+  document.getElementById('grn-modal').classList.add('hidden');
+  renderInventoryManager();
+  renderGrnList();
+  renderDashboard();
+  renderPOS();
+  showToast(`${number} saved · ${formatCurrency(totalCost)}`, 'success');
+  logAudit('GRN', `${number} · ${supplier ? supplier.name : supplierName} · ${lines.length} item(s) · ${formatCurrency(totalCost)}`);
+}
+
+function renderGrnList() {
+  const container = document.getElementById('grns-list');
+  if (!container) return;
+  const grns = getFromStorage(STORAGE_KEYS.grns).slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 8);
+  container.innerHTML = grns.length
+    ? grns.map((grn) => `
+      <div class="list-row">
+        <div class="mini-item">
+          <span class="mini-avatar">${escapeHtml(String(grn.number || 'G').charAt(0))}</span>
+          <div>
+            <div>${escapeHtml(grn.number)} · ${escapeHtml(grn.supplier)}</div>
+            <small>${new Date(grn.createdAt).toLocaleString()} · ${grn.lines.reduce((sum, line) => sum + line.qty, 0)} units</small>
+          </div>
+        </div>
+        <strong class="order-amount">${formatCurrency(grn.totalCost)}</strong>
+      </div>
+    `).join('')
+    : '<div class="list-row"><div>No goods received yet.</div><span class="badge info">New</span></div>';
+}
+
 function downloadAccountingExport() {
   const sales = filterSalesByDate(getFromStorage(STORAGE_KEYS.sales));
   const methods = getPaymentMethods();
@@ -7584,6 +7936,7 @@ const FULL_PACKAGE_PASSWORD = '@#Mother27';
 
 const FEATURE_DEFS = [
   { key: 'tables', title: 'Dine-in table management', icon: '🍽', description: 'Assign orders to tables and track open tables.' },
+  { key: 'waiters', title: 'Waiters', icon: '👤', description: 'Manage waiter names and assign to tables.' },
   { key: 'kitchen', title: 'Kitchen display & order tickets', icon: '👨‍🍳', description: 'Send paid orders to a kitchen queue with preparation status.' },
   { key: 'delivery', title: 'Delivery & takeaway', icon: '🛵', description: 'Delivery fee, rider details and takeaway/delivery order flags.' },
   { key: 'modifiers', title: 'Modifiers, add-ons & notes', icon: '➕', description: 'Extra toppings, sizes and special instructions per item.' },
@@ -7662,6 +8015,8 @@ function refreshFeatureUI() {
   renderFeatureConfig();
   renderReportTabs();
   applyHardwareUI();
+  const waiterField = document.querySelector('.waiter-info');
+  if (waiterField) waiterField.classList.toggle('hidden', !features.waiters);
   if (currentUser && document.getElementById('settings-panel') && document.getElementById('settings-panel').classList.contains('active')) {
     renderSettings();
   }
@@ -8031,6 +8386,18 @@ function renderFeatureConfig() {
     </div>`);
   }
 
+  if (features.waiters) {
+    const waiters = getWaiters();
+    parts.push(`<div class="card-panel fp-config-card">
+      <div class="card-title-row"><span class="card-icon purple">👤</span><div><h3>Waiters</h3><p>Manage waiter names assigned to tables.</p></div></div>
+      <div class="fp-chips">${waiters.map((name, i) => `<span class="fp-chip">${escapeHtml(name)} <button onclick="removeWaiter(${i})" title="Remove">×</button></span>`).join('') || '<span class="muted">No waiters yet.</span>'}</div>
+      <div class="pay-method-add">
+        <input id="new-waiter-name" type="text" placeholder="e.g. Maria" onkeydown="if(event.key==='Enter'){addWaiter();}" />
+        <button class="action-btn primary" onclick="addWaiter()">Add waiter</button>
+      </div>
+    </div>`);
+  }
+
   if (features.delivery) {
     parts.push(`<div class="card-panel fp-config-card">
       <div class="card-title-row"><span class="card-icon blue">🛵</span><div><h3>Delivery settings</h3><p>Flat fee applied to delivery orders.</p></div></div>
@@ -8143,6 +8510,37 @@ function removeTable(index) {
   writeToStorage(STORAGE_KEYS.settings, settings);
   if (removed.length && cartTable === removed[0]) { cartTable = null; renderCartTableBadge(); }
   renderFeatureConfig();
+}
+
+function getWaiters() {
+  const settings = getStoredSettings();
+  return Array.isArray(settings.waiters) ? settings.waiters.filter(Boolean) : [];
+}
+
+function addWaiter() {
+  const input = document.getElementById('new-waiter-name');
+  if (!input) return;
+  const name = input.value.trim();
+  if (!name) return;
+  const settings = getStoredSettings();
+  const waiters = getWaiters();
+  if (waiters.includes(name)) { showToast('That waiter already exists.', 'error'); return; }
+  waiters.push(name);
+  settings.waiters = waiters;
+  writeToStorage(STORAGE_KEYS.settings, settings);
+  input.value = '';
+  renderFeatureConfig();
+  showToast(`Waiter "${name}" added.`);
+}
+
+function removeWaiter(index) {
+  const settings = getStoredSettings();
+  const waiters = getWaiters();
+  const removed = waiters.splice(index, 1);
+  settings.waiters = waiters;
+  writeToStorage(STORAGE_KEYS.settings, settings);
+  if (removed.length) renderFeatureConfig();
+  showToast('Waiter removed.', 'success');
 }
 
 function getBranches() {
@@ -8386,21 +8784,65 @@ function saveDeliveryModal() {
   renderCart();
 }
 
+function clearTableOrder(name) {
+  const sales = getFromStorage(STORAGE_KEYS.sales);
+  const savedSale = sales.find((s) => s.table === name && s.savedOnly && !s.refunded);
+  if (!savedSale) {
+    showToast('No active order for this table.', 'error');
+    return;
+  }
+
+  // Restock inventory
+  const inventory = getFromStorage(STORAGE_KEYS.inventory);
+  const menu = getFromStorage(STORAGE_KEYS.menu);
+
+  savedSale.items.forEach((item) => {
+    const menuItem = menu.find((m) => m.name === item.name);
+    if (menuItem) {
+      const row = findInventoryRow(inventory, menuItem.ingredients || []);
+      if (row) {
+        row.stock += item.qty; // add back the quantity
+      }
+    }
+  });
+  writeToStorage(STORAGE_KEYS.inventory, inventory);
+
+  // Delete the saved order
+  const updated = sales.filter((entry) => entry.id !== savedSale.id);
+  writeToStorage(STORAGE_KEYS.sales, updated);
+  showToast('Table cleared. Items returned to inventory.', 'success');
+  logAudit('Table cleared', `Table ${name} · items returned to inventory`);
+
+  // Refresh panels
+  renderTablesPanel();
+  renderKitchenPanel();
+  renderDashboard();
+  renderOrdersManager();
+}
+
 function renderTablesPanel() {
   const container = document.getElementById('tables-view');
   if (!container) return;
   const tables = getTables();
   const sales = getFromStorage(STORAGE_KEYS.sales);
   const activeTables = {};
+  const now = new Date();
+
+  // Count only active (unpaid) savedOnly orders assigned to this table, same-day
   sales.forEach((sale) => {
-    if (sale.savedOnly || !sale.table) return;
+    if (sale.savedOnly !== true || !sale.table) return;
     const created = new Date(sale.createdAt);
-    const now = new Date();
-    const isToday = created.getFullYear() === now.getFullYear() && created.getMonth() === now.getMonth() && created.getDate() === now.getDate();
-    if (isToday && !sale.refunded) {
-      if (!activeTables[sale.table]) activeTables[sale.table] = { count: 0, total: 0 };
-      activeTables[sale.table].count += 1;
-      activeTables[sale.table].total += sale.total;
+    if (created.getFullYear() !== now.getFullYear() ||
+        created.getMonth() !== now.getMonth() ||
+        created.getDate() !== now.getDate()) return;
+    if (!activeTables[sale.table]) {
+      activeTables[sale.table] = { count: 0, total: 0, waiter: null };
+    }
+    activeTables[sale.table].count += 1;
+    activeTables[sale.table].total += sale.total;
+    // Capture waiter from the most recent savedOnly order for this table
+    if (sale.waiter && !activeTables[sale.table].waiter) {
+      activeTables[sale.table].waiter = sale.waiter;
     }
   });
 
@@ -8420,7 +8862,10 @@ function renderTablesPanel() {
               <span class="table-status">${info ? 'Occupied' : 'Free'}</span>
             </div>
             ${info
-              ? `<div class="table-card-stats"><span>${info.count} order(s)</span><strong>${formatCurrency(info.total)}</strong></div>`
+              ? `<div class="table-card-stats"><span>${info.count} order(s)</span><strong>${formatCurrency(info.total)}</strong>${info.waiter ? `<span class="waiter-badge">Waiter: ${escapeHtml(info.waiter)}</span>` : ''}</div>
+                <div class="table-card-actions">
+                  <button class="action-btn danger small-btn" onclick="clearTableOrder('${escapeHtml(name)}')">Clear</button>
+                </div>`
               : '<div class="table-card-stats muted">No active order</div>'}
           </div>`;
       }).join('')}
@@ -8428,18 +8873,25 @@ function renderTablesPanel() {
 }
 
 function assignTableOrder(name) {
-  cartTable = name;
-  showPanel('pos');
-  renderCartTableBadge();
-  renderCart();
-  showToast(`Order assigned to ${name}.`);
+  const sales = getFromStorage(STORAGE_KEYS.sales);
+  const savedSale = sales.find((s) => s.table === name && s.savedOnly && !s.refunded);
+  if (savedSale) {
+    recallSavedOrder(savedSale.id);
+    showToast(`Loading order for ${name} — ready for payment.`);
+  } else {
+    cartTable = name;
+    showPanel('pos');
+    renderCartTableBadge();
+    renderCart();
+    showToast(`Order assigned to ${name}.`);
+  }
 }
 
 function renderKitchenPanel() {
   const container = document.getElementById('kitchen-view');
   if (!container) return;
   const sales = getFromStorage(STORAGE_KEYS.sales)
-    .filter((sale) => !sale.savedOnly && sale.kitchenStatus !== 'done')
+    .filter((sale) => sale.kitchenStatus !== 'done')
     .filter((sale) => {
       const created = new Date(sale.createdAt);
       const now = new Date();
@@ -10046,6 +10498,7 @@ function executeReset() {
   if (scopes.includes('audit')) writeToStorage(STORAGE_KEYS.audit, []);
   if (scopes.includes('customers')) { writeToStorage(STORAGE_KEYS.customers, []); cartCustomer = null; cartLoyaltyPoints = 0; }
   if (scopes.includes('purchases')) writeToStorage(STORAGE_KEYS.purchases, []);
+  if (scopes.includes('grns')) writeToStorage(STORAGE_KEYS.grns, []);
   if (scopes.includes('closings')) writeToStorage(STORAGE_KEYS.closings, []);
   if (scopes.includes('refunds')) writeToStorage(STORAGE_KEYS.refunds, []);
   if (scopes.includes('priceHistory')) writeToStorage(STORAGE_KEYS.priceHistory, []);

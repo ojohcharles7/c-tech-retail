@@ -262,6 +262,10 @@
               <div class="cart-header">
                 <h3>Current order</h3>
                 <span id="cart-total-count">0 items</span>
+                <div class="waiter-info">
+                  <span>Waiter:</span>
+                  <input type="text" id="waiter-name" placeholder="e.g. Maria" value="${currentUser ? currentUser.name : 'Cashier'}" />
+                </div>
               </div>
               <div class="recall-grid">
               <button class="recall-saved-btn" onclick="openSavedOrdersModal()">
@@ -283,6 +287,10 @@
               <button class="recall-saved-btn hidden" id="cart-table-btn" onclick="openTablePicker()">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16"/><path d="M6 6v13a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V6"/><path d="M9 11h6"/></svg>
                 <span id="cart-table-badge" class="customer-badge">No table</span>
+              </button>
+              <button class="recall-saved-btn" id="cart-send-table-btn" onclick="sendToTable()" title="Send items to table">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v6l4 4"/><path d="M12 3l-4 4"/><path d="M19 15v6h-6"/><path d="M5 15v6h6"/></svg>
+                <span>Send to table</span>
               </button>
               <button class="recall-saved-btn hidden" id="cart-order-type-btn" onclick="openDeliveryModal()">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17h14M7 17l1-5h8l1 5"/><path d="M8 17a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/><path d="M19 17a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/></svg>
@@ -444,158 +452,198 @@
             <div>
               <span class="eyebrow">Store</span>
               <h2>Inventory management</h2>
+              <p class="panel-sub">Track stock in, stock out and current inventory levels.</p>
             </div>
-            <div class="inv-branch-filter-wrap hidden" id="inv-branch-filter-wrap">
-              <label for="inventory-branch-filter">Branch</label>
-              <select id="inventory-branch-filter" onchange="setInventoryBranchFilter(this.value)">
-                <option value="">All branches</option>
-              </select>
+            <div class="inv-head-actions">
+              <div class="inv-branch-filter-wrap hidden" id="inv-branch-filter-wrap">
+                <label for="inventory-branch-filter">Branch</label>
+                <select id="inventory-branch-filter" onchange="setInventoryBranchFilter(this.value)">
+                  <option value="">All branches</option>
+                </select>
+              </div>
+              <button class="primary-btn" type="button" onclick="document.getElementById('inventory-add-card').scrollIntoView({behavior:'smooth',block:'start'})">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+                <span>New item</span>
+              </button>
             </div>
           </div>
 
           <div id="inventory-summary" class="inventory-summary"></div>
 
-          <div class="card-panel" id="voided-returns-card">
-            <div class="card-title-row">
-              <div>
-                <h3>Voided returns</h3>
-                <p>Products voided from sales are held here as pending returns. Tap <strong>Return to stock</strong> to add them back to the store immediately.</p>
+          <div class="inv-grid">
+            <div class="card-panel inv-section goods-in">
+              <div class="inv-section-head">
+                <span class="card-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg></span>
+                <div>
+                  <h3>Goods in</h3>
+                  <p>Stock received from suppliers</p>
+                </div>
               </div>
+              <div class="card-actions">
+                <button class="action-btn primary" onclick="openGrnModal()">Record GRN</button>
+                <button class="action-btn" onclick="openPurchaseModal()">Record purchase</button>
+                <button class="action-btn secondary" onclick="openSuppliersModal()">Suppliers</button>
+              </div>
+              <div class="inv-sub-title">Goods received notes</div>
+              <div id="grns-list" class="mini-list"></div>
+              <div class="inv-sub-title">Supplier purchases</div>
+              <div id="purchases-list" class="mini-list"></div>
             </div>
-            <div id="voided-returns-list" class="mini-list"></div>
+
+            <div class="card-panel inv-section goods-out">
+              <div class="inv-section-head">
+                <span class="card-icon red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="m7 8 5-5 5 5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg></span>
+                <div>
+                  <h3>Stock movements</h3>
+                  <p>Returns, wastage &amp; activity</p>
+                </div>
+              </div>
+              <div id="voided-returns-card" class="inv-voids">
+                <div class="inv-sub-title">Pending returns (voided)</div>
+                <div id="voided-returns-list" class="mini-list"></div>
+              </div>
+              <div class="inv-sub-title">Recent stock-in activity</div>
+              <div id="stock-activity-list" class="mini-list"></div>
+            </div>
           </div>
 
-          <div class="card-panel import-export-card">
-            <div class="card-title-row">
-              <div>
-                <h3>Import &amp; export products</h3>
-                <p>Export your products to CSV, edit them in Excel, then import the file back to add or update items.</p>
+          <div class="inv-grid">
+            <div class="card-panel" id="inventory-add-card">
+              <div class="card-title-row">
+                <span class="card-icon red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M5 7l1 12h12l1-12"/><path d="M9 7V5h6v2"/><path d="M9 11v6M15 11v6"/></svg></span>
+                <div>
+                  <h3>Add stock item</h3>
+                  <p>Add a new product to your store inventory.</p>
+                </div>
               </div>
+              <form id="inventory-form" class="form-grid inv-form">
+                <div class="field-group">
+                  <label>Item / Product</label>
+                  <div class="input-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5h12l1.5 17h-15z"/><path d="M9 8.5h6"/><path d="M9 12.5h6"/></svg>
+                    <input id="stock-name" type="text" placeholder="e.g. Whole Chicken" required />
+                  </div>
+                </div>
+                <div class="field-group">
+                  <label>Group / Category</label>
+                  <div class="input-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h7v7H4z"/><path d="M13 4h7v4h-7z"/><path d="M13 11h7v9h-7z"/><path d="M4 14h7v6H4z"/></svg>
+                    <input id="stock-group" type="text" placeholder="e.g. Beef, Bakery, Drinks" />
+                  </div>
+                </div>
+                <div class="field-group">
+                  <label>Unit</label>
+                  <div class="input-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v6"/><path d="M6 9h12l-1.5 12h-9z"/><path d="M9 13h6"/></svg>
+                    <input id="stock-unit" type="text" value="pcs" required />
+                  </div>
+                </div>
+                <div class="field-group">
+                  <label>Stock</label>
+                  <div class="input-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="16" height="13" rx="2"/><path d="M8 7V5a4 4 0 0 1 8 0v2"/><path d="M12 11v4"/><path d="M10 13h4"/></svg>
+                    <input id="stock-qty" type="number" min="0" step="1" placeholder="0" required />
+                  </div>
+                </div>
+                <div class="field-group">
+                  <label>Price</label>
+                  <div class="input-icon">
+                    <span>₦</span>
+                    <input id="stock-price" type="number" min="0" step="0.01" placeholder="0.00" />
+                  </div>
+                </div>
+                <div class="field-group">
+                  <label>Reorder level</label>
+                  <div class="input-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+                    <input id="stock-reorder" type="number" min="0" step="1" value="10" />
+                  </div>
+                </div>
+                <div class="field-group">
+                  <label>Expiry date (optional)</label>
+                  <div class="input-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M8 3v4M16 3v4M4 11h16"/></svg>
+                    <input id="stock-expiry" type="date" />
+                  </div>
+                </div>
+                <div class="field-group hidden" id="stock-branch-field">
+                  <label>Branch</label>
+                  <div class="input-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M10 21v-6h4v6"/></svg>
+                    <select id="stock-branch"><option value="">All branches</option></select>
+                  </div>
+                </div>
+                <button type="submit" class="primary-btn add-stock-btn">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+                  <span>Add stock</span>
+                </button>
+              </form>
+              <p class="form-hint">Set a <strong>price</strong>, then use <strong>Push to menu</strong> to sell this product on the front office POS.</p>
             </div>
-            <div class="io-actions">
-              <div class="io-btn export" onclick="exportInventoryCSV()">
-                <div class="io-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+
+            <div class="card-panel import-export-card">
+              <div class="card-title-row">
+                <div>
+                  <h3>Import &amp; export products</h3>
+                  <p>Export your products to CSV, edit them in Excel, then import the file back to add or update items.</p>
                 </div>
-                <div class="io-text">
-                  <strong>Export CSV</strong>
-                  <small>Download your current products</small>
-                </div>
-                <span class="io-arrow">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
-                </span>
               </div>
-              <div class="io-btn import" onclick="document.getElementById('inventory-import-input').click()">
-                <div class="io-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="m7 8 5-5 5 5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+              <div class="io-actions">
+                <div class="io-btn export" onclick="exportInventoryCSV()">
+                  <div class="io-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+                  </div>
+                  <div class="io-text">
+                    <strong>Export CSV</strong>
+                    <small>Download your current products</small>
+                  </div>
+                  <span class="io-arrow">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
+                  </span>
                 </div>
-                <div class="io-text">
-                  <strong>Import CSV</strong>
-                  <small>Add or update products</small>
+                <div class="io-btn import" onclick="document.getElementById('inventory-import-input').click()">
+                  <div class="io-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="m7 8 5-5 5 5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+                  </div>
+                  <div class="io-text">
+                    <strong>Import CSV</strong>
+                    <small>Add or update products</small>
+                  </div>
+                  <span class="io-arrow">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
+                  </span>
                 </div>
-                <span class="io-arrow">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
-                </span>
+                <input type="file" id="inventory-import-input" accept=".csv" class="hidden" onchange="handleInventoryImport(event)" />
               </div>
-              <input type="file" id="inventory-import-input" accept=".csv" class="hidden" onchange="handleInventoryImport(event)" />
-            </div>
-            <div class="field-group stacked hidden" id="inventory-import-branch-field">
-              <label>Import to branch</label>
-              <select id="inventory-import-branch"><option value="">All branches</option></select>
-              <p class="form-hint">Pick the branch this CSV's products &amp; prices go to. Choose "All branches" to keep items as shared stock.</p>
+              <div class="field-group stacked hidden" id="inventory-import-branch-field">
+                <label>Import to branch</label>
+                <select id="inventory-import-branch"><option value="">All branches</option></select>
+                <p class="form-hint">Pick the branch this CSV's products &amp; prices go to. Choose "All branches" to keep items as shared stock.</p>
+              </div>
             </div>
           </div>
 
           <div class="card-panel">
-            <div class="card-title-row">
-              <span class="card-icon red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M5 7l1 12h12l1-12"/><path d="M9 7V5h6v2"/><path d="M9 11v6M15 11v6"/></svg></span>
-              <div>
-                <h3>Add stock item</h3>
-                <p>Add a new product to your store inventory.</p>
+            <div class="menu-list-head">
+              <h3>Inventory list</h3>
+              <div class="inv-list-head-right">
+                <div class="view-switch" id="inventory-view-switch">
+                  <button class="view-btn active" data-view="table" onclick="setInventoryView('table')" title="Table view">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18"/></svg>
+                    <span>Table</span>
+                  </button>
+                  <button class="view-btn" data-view="cards" onclick="setInventoryView('cards')" title="Card view">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="9" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+                    <span>Cards</span>
+                  </button>
+                  <button class="view-btn" data-view="list" onclick="setInventoryView('list')" title="Compact list">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>
+                    <span>List</span>
+                  </button>
+                </div>
+                <span class="group-count" id="inventory-count">0 items</span>
               </div>
             </div>
-            <form id="inventory-form" class="form-grid inv-form">
-              <div class="field-group">
-                <label>Item / Product</label>
-                <div class="input-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5h12l1.5 17h-15z"/><path d="M9 8.5h6"/><path d="M9 12.5h6"/></svg>
-                  <input id="stock-name" type="text" placeholder="e.g. Whole Chicken" required />
-                </div>
-              </div>
-              <div class="field-group">
-                <label>Group / Category</label>
-                <div class="input-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h7v7H4z"/><path d="M13 4h7v4h-7z"/><path d="M13 11h7v9h-7z"/><path d="M4 14h7v6H4z"/></svg>
-                  <input id="stock-group" type="text" placeholder="e.g. Beef, Bakery, Drinks" />
-                </div>
-              </div>
-              <div class="field-group">
-                <label>Unit</label>
-                <div class="input-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v6"/><path d="M6 9h12l-1.5 12h-9z"/><path d="M9 13h6"/></svg>
-                  <input id="stock-unit" type="text" value="pcs" required />
-                </div>
-              </div>
-              <div class="field-group">
-                <label>Stock</label>
-                <div class="input-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="16" height="13" rx="2"/><path d="M8 7V5a4 4 0 0 1 8 0v2"/><path d="M12 11v4"/><path d="M10 13h4"/></svg>
-                  <input id="stock-qty" type="number" min="0" step="1" placeholder="0" required />
-                </div>
-              </div>
-              <div class="field-group">
-                <label>Price</label>
-                <div class="input-icon">
-                  <span>₦</span>
-                  <input id="stock-price" type="number" min="0" step="0.01" placeholder="0.00" />
-                </div>
-              </div>
-              <div class="field-group">
-                <label>Reorder level</label>
-                <div class="input-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
-                  <input id="stock-reorder" type="number" min="0" step="1" value="10" />
-                </div>
-              </div>
-              <div class="field-group">
-                <label>Expiry date (optional)</label>
-                <div class="input-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M8 3v4M16 3v4M4 11h16"/></svg>
-                  <input id="stock-expiry" type="date" />
-                </div>
-              </div>
-              <div class="field-group hidden" id="stock-branch-field">
-                <label>Branch</label>
-                <div class="input-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M10 21v-6h4v6"/></svg>
-                  <select id="stock-branch"><option value="">All branches</option></select>
-                </div>
-              </div>
-              <button type="submit" class="primary-btn add-stock-btn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
-                <span>Add stock</span>
-              </button>
-            </form>
-            <p class="form-hint">Set a <strong>price</strong>, then use <strong>Push to menu</strong> to sell this product on the front office POS.</p>
-          </div>
-
-          <div class="card-panel">
-            <div class="card-title-row">
-              <span class="card-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14l-1.5 12h-11z"/><path d="M9 6.5A2.5 2.5 0 0 1 11.5 4c1 0 2 .8 2 2"/><path d="M9 12.5h6"/></svg></span>
-              <div>
-                <h3>Supplier purchases</h3>
-                <p>Record stock bought from a supplier. Stock is added to inventory automatically.</p>
-              </div>
-            </div>
-            <div class="card-actions">
-              <button class="action-btn primary" onclick="openPurchaseModal()">Record purchase</button>
-              <button class="action-btn secondary" onclick="openSuppliersModal()">Suppliers</button>
-            </div>
-            <div id="purchases-list" class="mini-list"></div>
-          </div>
-
-          <div class="card-panel">
-            <h3>Inventory</h3>
             <div class="report-search-box frontstore-search inv-search">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
               <input id="inventory-search" type="text" placeholder="Search by product or group..." autocomplete="off" />
@@ -860,6 +908,7 @@
             <button class="report-tab" data-report="customers">Customer report</button>
             <button class="report-tab" data-report="refunds">Refund report</button>
             <button class="report-tab" data-report="purchases">Purchases report</button>
+            <button class="report-tab" data-report="grns">Goods received (GRN)</button>
             <button class="report-tab" data-report="profit">Menu profitability</button>
             <button class="report-tab" data-report="valuation">Stock valuation</button>
             <button class="report-tab" data-report="profitloss">Profit &amp; loss</button>
@@ -1302,6 +1351,7 @@
                 <label class="reset-check"><input type="checkbox" value="settings" /> <span>Settings &amp; tax</span></label>
                 <label class="reset-check"><input type="checkbox" value="customers" /> <span>Customers &amp; loyalty</span></label>
                 <label class="reset-check"><input type="checkbox" value="purchases" /> <span>Supplier purchases</span></label>
+                <label class="reset-check"><input type="checkbox" value="grns" /> <span>Goods received (GRN)</span></label>
                 <label class="reset-check"><input type="checkbox" value="closings" /> <span>Daily closings</span></label>
                 <label class="reset-check"><input type="checkbox" value="refunds" /> <span>Refunds</span></label>
                 <label class="reset-check"><input type="checkbox" value="priceHistory" /> <span>Price history</span></label>
@@ -1994,6 +2044,45 @@
             <button class="action-btn primary" onclick="addSupplier()">Add supplier</button>
           </div>
           <div id="suppliers-list" class="mini-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="grn-modal" class="modal hidden">
+      <div class="modal-card purchase-card">
+        <div class="modal-head">
+          <h3>Goods received note (GRN)</h3>
+          <button class="close-btn" onclick="closeGrnModal()">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="grn-meta">
+            <span class="grn-number" id="grn-number">GRN-0001</span>
+            <span class="grn-date" id="grn-date"></span>
+          </div>
+          <p class="form-hint">Record goods received from a supplier. Stock is added to inventory automatically.</p>
+          <div class="edit-grid">
+            <div class="field-group stacked">
+              <label>Supplier</label>
+              <input id="grn-supplier" type="text" placeholder="e.g. Chico Farms" list="suppliers-datalist" autocomplete="off" />
+            </div>
+            <div class="field-group stacked">
+              <label>Reference (PO / delivery note)</label>
+              <input id="grn-reference" type="text" placeholder="Optional" />
+            </div>
+          </div>
+          <div class="purchase-table-wrap">
+            <table class="purchase-table">
+              <thead>
+                <tr><th>Product</th><th>Qty received</th><th>Unit cost</th></tr>
+              </thead>
+              <tbody id="grn-items"></tbody>
+            </table>
+          </div>
+          <div class="void-auth-error" id="grn-error"></div>
+        </div>
+        <div class="modal-actions">
+          <button class="action-btn secondary" onclick="closeGrnModal()">Cancel</button>
+          <button class="action-btn primary" onclick="saveGrn()">Save GRN</button>
         </div>
       </div>
     </div>
