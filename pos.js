@@ -266,6 +266,7 @@ let cartTip = 0;
 let pendingModifierItem = null;
 let pendingModifierConfig = [];
 let fpUnlocked = false;
+let lastPosRenderSig = '';
 
 const SERVER_KEYS = Object.values(STORAGE_KEYS).filter((key) => !['session', 'panel', 'reportTab', 'reportPeriod', 'recovery'].includes(key));
 
@@ -815,6 +816,7 @@ function showPanel(panelName) {
     panelName = allowed[0];
   }
   closeStockAlertPanel();
+  closeMobileCart();
   document.getElementById('app-view').classList.toggle('pos-mode', panelName === 'pos');
   if (panelName === 'pos') document.getElementById('app-view').classList.remove('nav-open');
 
@@ -1565,6 +1567,26 @@ function renderPOS() {
   updateMenuScrollButtons();
 
   renderCart();
+  lastPosRenderSig = getPosDataSignature();
+}
+
+function getPosDataSignature() {
+  const menu = getFromStorage(STORAGE_KEYS.menu) || [];
+  const inventory = getFromStorage(STORAGE_KEYS.inventory) || [];
+  let sig = '';
+  for (let i = 0; i < menu.length; i++) {
+    const m = menu[i];
+    if (!m) continue;
+    sig += (m.id || '') + ':' + (m.name || '') + ':' + (m.price || '') + ':' + (m.category || '') + ':' + (m.color || '') + ':' + (m.image ? '1' : '0') + ';';
+  }
+  sig += '|';
+  for (let i = 0; i < inventory.length; i++) {
+    const r = inventory[i];
+    if (!r) continue;
+    sig += (r.id || '') + ':' + (r.name || '') + ':' + (r.stock || '') + ':' + (r.reorderLevel || '') + ';';
+  }
+  sig += '|' + JSON.stringify(getFeatures());
+  return sig;
 }
 
 let menuGridRenderId = 0;
@@ -1622,7 +1644,7 @@ function renderMenuGrid(grid, items, palette, categoryColor) {
     return `
       <button class="menu-item${lightTile}${selected}" data-id="${item.id}" style="--tile:${tileColor}" ${availability.status === 'Out' ? 'disabled' : ''}>
         <span class="${badgeClass}">${badgeText}</span>
-        ${getFeature('photos') && item.image ? `<img class="menu-item-img" src="${item.image}" alt="${escapeHtml(item.name)}" />` : ''}
+        ${getFeature('photos') && item.image ? `<img class="menu-item-img" src="${item.image}" alt="${escapeHtml(item.name)}" loading="lazy" decoding="async" />` : ''}
         <div class="menu-item-info">
           <div class="menu-item-name">${escapeHtml(item.name)}</div>
           <div class="menu-item-price">${formatCurrency(Number(item.price) || 0)}</div>
@@ -1955,6 +1977,8 @@ function renderCart() {
       const row = document.getElementById(id);
       if (row) row.classList.add('hidden');
     });
+    updateMobileCartBar(0, 0);
+    closeMobileCart();
     return;
   }
 
@@ -2012,6 +2036,51 @@ function renderCart() {
     tipRow.classList.toggle('hidden', !cartTip);
     tipValue.textContent = formatCurrency(cartTip);
   }
+  updateMobileCartBar(cart.reduce((sum, item) => sum + item.qty, 0), total);
+}
+
+function isMobileView() {
+  return typeof window !== 'undefined' && window.matchMedia('(max-width: 720px)').matches;
+}
+
+function updateMobileCartBar(count, total) {
+  const countEl = document.getElementById('mobile-cart-count');
+  const totalEl = document.getElementById('mobile-cart-total');
+  if (countEl) countEl.textContent = `${count} item${count === 1 ? '' : 's'}`;
+  if (totalEl) totalEl.textContent = formatCurrency(total);
+  syncMobileCartBar();
+}
+
+function syncMobileCartBar() {
+  const bar = document.getElementById('mobile-cart-bar');
+  if (!bar) return;
+  const posPanel = document.getElementById('pos-panel');
+  const posActive = posPanel ? posPanel.classList.contains('active') : false;
+  if (isMobileView() && posActive) {
+    bar.classList.remove('hidden');
+  } else {
+    bar.classList.add('hidden');
+  }
+}
+
+function openMobileCart() {
+  if (!isMobileView()) return;
+  const posPanel = document.getElementById('pos-panel');
+  const bar = document.getElementById('mobile-cart-bar');
+  const backdrop = document.getElementById('mobile-cart-backdrop');
+  if (!posPanel) return;
+  posPanel.classList.add('mobile-cart-open');
+  if (bar) bar.classList.add('hidden');
+  if (backdrop) backdrop.classList.remove('hidden');
+}
+
+function closeMobileCart() {
+  const posPanel = document.getElementById('pos-panel');
+  const bar = document.getElementById('mobile-cart-bar');
+  const backdrop = document.getElementById('mobile-cart-backdrop');
+  if (posPanel) posPanel.classList.remove('mobile-cart-open');
+  syncMobileCartBar();
+  if (backdrop) backdrop.classList.add('hidden');
 }
 
 function renderLoyaltyRow(loyaltyAmt) {
@@ -2612,6 +2681,7 @@ function completeCheckout() {
   renderOrdersManager();
   renderTablesPanel();
   closePaymentModal();
+  closeMobileCart();
   showToast('Payment successful', 'success');
   if (getHardware('printer')) printReceipt(sale);
   if (getHardware('cashDrawer') && (sale.payments || []).some((payment) => /cash/i.test(payment.method))) {
@@ -3043,7 +3113,7 @@ function renderMenuManager() {
           <tr ${editingMenuId === item.id ? 'class="row-editing"' : ''}>
             <td>
               <div class="fs-item">
-                ${item.image ? `<span class="fs-avatar fs-thumb"><img src="${item.image}" alt="" /></span>` : `<span class="fs-avatar" style="background:${avatarBg};color:${avatarFg}">${item.name.charAt(0).toUpperCase()}</span>`}
+                ${item.image ? `<span class="fs-avatar fs-thumb"><img src="${item.image}" alt="" loading="lazy" decoding="async" /></span>` : `<span class="fs-avatar" style="background:${avatarBg};color:${avatarFg}">${item.name.charAt(0).toUpperCase()}</span>`}
                 <div class="fs-item-text"><strong>${item.name}</strong></div>
               </div>
             </td>
@@ -11446,7 +11516,10 @@ function refreshLivePanels() {
   if (document.getElementById('orders-panel')?.classList.contains('active')) renderOrdersManager();
   if (document.getElementById('bookorders-panel')?.classList.contains('active')) renderBookOrdersPanel();
   if (document.getElementById('reports-panel')?.classList.contains('active')) renderReports();
-  if (document.getElementById('pos-panel')?.classList.contains('active')) renderPOS();
+  if (document.getElementById('pos-panel')?.classList.contains('active')) {
+    const posSig = getPosDataSignature();
+    if (posSig !== lastPosRenderSig) renderPOS();
+  }
   if (document.getElementById('menu-panel')?.classList.contains('active')) renderMenuManager();
   if (document.getElementById('leftover-panel')?.classList.contains('active')) renderLeftoverManager();
   if (document.getElementById('promos-panel')?.classList.contains('active')) renderPromosManager();
