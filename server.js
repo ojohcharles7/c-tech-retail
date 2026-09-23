@@ -29,6 +29,7 @@ const sseClients = new Set();
 
 const systems = {};
 const SYSTEM_ONLINE_MS = 120000;
+const SYSTEM_RETENTION_MS = 2 * 60 * 60 * 1000;
 
 function isServerSelf(ip) {
   if (!ip) return false;
@@ -37,7 +38,17 @@ function isServerSelf(ip) {
   return getNetworkAddresses().some((entry) => entry.address === clean);
 }
 
+function pruneSystems() {
+  const now = Date.now();
+  for (const [id, entry] of Object.entries(systems)) {
+    if (!entry || !entry.name || now - (entry.lastSeen || 0) > SYSTEM_RETENTION_MS) {
+      delete systems[id];
+    }
+  }
+}
+
 function getSystemsList() {
+  pruneSystems();
   const now = Date.now();
   return Object.entries(systems)
     .filter(([, entry]) => entry && entry.name)

@@ -1,4 +1,23 @@
 
+// Backend API base. When the page is served from another port
+// (e.g. VS Code Live Server on 5502), route all API calls to the
+// real POS server on 5501 via CORS so the app still works.
+window.__POS_VERSION = '20260923s';
+window.addEventListener('error', (event) => {
+  try {
+    const message = String(event.error ? (event.error.message || event.error) : event.message);
+    console.warn('[POS] Uncaught error: ' + message + '\n' + (event.error && event.error.stack || ''));
+    const el = document.getElementById('fatal-error-chip');
+    if (el) { el.textContent = 'Error: ' + message; el.classList.add('show'); }
+  } catch (e) {}
+});
+
+const API_BASE = (function () {
+  const port = parseInt(window.location.port, 10);
+  if (!isNaN(port) && port !== 5501) return 'http://localhost:5501';
+  return '';
+})();
+
 const STORAGE_KEYS = {
   users: 'ff_users',
   menu: 'ff_menu',
@@ -97,8 +116,8 @@ const defaultSettings = {
 const ROLE_LABELS = { superadmin: 'Super Admin', admin: 'Owner', manager: 'Manager', cashier: 'Cashier', audit: 'Audit' };
 
 const ROLE_PANELS = {
-  superadmin: ['dashboard', 'pos', 'menu', 'inventory', 'leftover', 'promos', 'orders', 'bookorders', 'shift', 'reports', 'audit', 'settings'],
-  admin: ['dashboard', 'pos', 'menu', 'inventory', 'leftover', 'promos', 'orders', 'bookorders', 'shift', 'reports', 'audit', 'settings'],
+  superadmin: ['dashboard', 'pos', 'menu', 'inventory', 'leftover', 'promos', 'orders', 'bookorders', 'shift', 'reports', 'audit', 'settings', 'fullpackage'],
+  admin: ['dashboard', 'pos', 'menu', 'inventory', 'leftover', 'promos', 'orders', 'bookorders', 'shift', 'reports', 'audit', 'settings', 'fullpackage'],
   manager: ['dashboard', 'menu', 'inventory', 'leftover', 'promos', 'orders', 'bookorders', 'shift', 'reports', 'audit'],
   cashier: ['pos'],
   audit: ['reports', 'inventory', 'menu', 'orders', 'bookorders']
@@ -193,7 +212,6 @@ function getRolePanels() {
   if (features.tables) extra.push('tables');
   if (features.kitchen) extra.push('kitchen');
   if (features.reorder) extra.push('purchaseorders');
-  if (role === 'admin' || role === 'superadmin') extra.push('fullpackage');
   return [...new Set([...base, ...extra])];
 }
 
@@ -234,6 +252,7 @@ function getPaymentMethods() {
 let currentUser = null;
 let cart = [];
 let pendingSavedOrderId = null;
+let checkedOutSaleIds = [];
 let editingMenuId = null;
 let editingInventoryId = null;
 let appliedPromo = null;
@@ -244,9 +263,9 @@ let cartTable = null;
 let cartOrderType = 'dinein';
 let cartDelivery = { address: '', riderName: '', riderPhone: '' };
 let cartTip = 0;
-let fullPackageUnlocked = false;
 let pendingModifierItem = null;
 let pendingModifierConfig = [];
+let fpUnlocked = false;
 
 const SERVER_KEYS = Object.values(STORAGE_KEYS).filter((key) => !['session', 'panel', 'reportTab', 'reportPeriod', 'recovery'].includes(key));
 
@@ -254,6 +273,7 @@ const memoryStore = {};
 const lastLocalWrite = {};
 const pendingPushKeys = new Set();
 let serverOnline = false;
+let serverPollBackoffUntil = 0;
 let serverWriteQueue = Promise.resolve();
 let sseSource = null;
 let lastPollJson = null;
@@ -307,7 +327,7 @@ function writeToStorage(key, value) {
 
 function pushToServer(key, value) {
   serverWriteQueue = serverWriteQueue.then(() =>
-    fetch('/api/data/' + encodeURIComponent(key), {
+    fetch(API_BASE + '/api/data/' + encodeURIComponent(key), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(value)
@@ -321,7 +341,7 @@ function pushToServer(key, value) {
 function connectServerEvents() {
   try {
     if (sseSource) sseSource.close();
-    sseSource = new EventSource('/api/events');
+    sseSource = new EventSource(API_BASE + '/api/events');
     sseSource.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data);
@@ -330,8 +350,11 @@ function connectServerEvents() {
           return;
         }
         if (msg && msg.key && memoryStore[msg.key] !== undefined) {
-          memoryStore[msg.key] = msg.value;
-          refreshLivePanels();
+          const lastWriteAge = Date.now() - (lastLocalWrite[msg.key] || 0);
+          if (lastWriteAge >= 1500) {
+            memoryStore[msg.key] = msg.value;
+            refreshLivePanels();
+          }
         }
       } catch (error) {}
     };
@@ -342,7 +365,7 @@ async function initServerSync() {
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 4000);
-    const res = await fetch('/api/data', { signal: controller.signal });
+    const res = await fetch(API_BASE + '/api/data', { signal: controller.signal });
     clearTimeout(timer);
     if (!res.ok) throw new Error('Server unavailable');
     const payload = await res.json();
@@ -365,7 +388,7 @@ let systemsInitialized = false;
 async function sendHeartbeat() {
   if (!serverOnline) return;
   try {
-    const res = await fetch('/api/heartbeat', {
+    const res = await fetch(API_BASE + '/api/heartbeat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: getTerminalId(), system: getTerminalSystem(), user: currentUser ? currentUser.name : '' })
@@ -391,7 +414,7 @@ async function sendHeartbeat() {
 async function pollSystems() {
   if (!serverOnline) return;
   try {
-    const res = await fetch('/api/systems', { cache: 'no-store' });
+    const res = await fetch(API_BASE + '/api/systems', { cache: 'no-store' });
     if (!res.ok) return;
     const payload = await res.json();
     handleSystemsUpdate(payload.systems || []);
@@ -774,11 +797,23 @@ function closeNav() {
 }
 
 function showPanel(panelName) {
+  if (panelName === 'settings') {
+    if (!currentUser || !['superadmin', 'admin'].includes(currentUser.role)) {
+      panelName = 'dashboard';
+    }
+  }
+  if (panelName === 'fullpackage') {
+    if (!currentUser || !['superadmin', 'admin'].includes(currentUser.role)) {
+      panelName = 'dashboard';
+    } else if (!fpUnlocked) {
+      requestFpAuth();
+      return;
+    }
+  }
   const allowed = getRolePanels();
   if (currentUser && !allowed.includes(panelName)) {
     panelName = allowed[0];
   }
-
   closeStockAlertPanel();
   document.getElementById('app-view').classList.toggle('pos-mode', panelName === 'pos');
   if (panelName === 'pos') document.getElementById('app-view').classList.remove('nav-open');
@@ -804,14 +839,15 @@ function showPanel(panelName) {
   if (panelName === 'reports') { reportPage = 1; renderReports(); }
   if (panelName === 'shift') renderShiftManager();
   if (panelName === 'settings') renderSettings();
+  if (panelName === 'fullpackage') renderFullPackagePanel();
   if (panelName === 'audit') { auditPage = 1; renderAuditManager(); }
   if (panelName === 'tables') renderTablesPanel();
   if (panelName === 'kitchen') renderKitchenPanel();
   if (panelName === 'purchaseorders') renderPurchaseOrdersPanel();
-  if (panelName === 'fullpackage') renderFullPackageAuth();
 }
 
 function login() {
+  if (currentUser) return;
   const username = document.getElementById('username').value.trim();
   const password = document.getElementById('password').value.trim();
   const loginError = document.getElementById('login-error');
@@ -839,6 +875,15 @@ function login() {
   renderAuth();
   applyBrandName();
   showPanel('dashboard');
+  document.getElementById('username').value = '';
+  document.getElementById('password').value = '';
+  const keyboard = document.getElementById('on-screen-keyboard');
+  if (keyboard) keyboard.classList.add('hidden');
+  const oskToggle = document.querySelector('.osk-toggle-btn');
+  if (oskToggle) {
+    oskToggle.classList.remove('active');
+    oskToggle.setAttribute('aria-expanded', 'false');
+  }
   logAudit('Login', `Signed in as ${match.name} (@${match.username})`);
   checkLowStockNotification(true);
   sendHeartbeat();
@@ -863,6 +908,7 @@ function exitFullScreen() {
 }
 
 function logout() {
+  console.warn('[POS] logout() fired. Version ' + window.__POS_VERSION + ' Caller:\n' + new Error().stack);
   logAudit('Logout', `${currentUser ? currentUser.name : 'User'} signed out`);
   exitFullScreen();
   currentUser = null;
@@ -870,8 +916,10 @@ function logout() {
   cartCustomer = null;
   cartLoyaltyPoints = 0;
   pendingSavedOrderId = null;
+  checkedOutSaleIds = [];
   document.documentElement.classList.remove('app-logged-in');
   localStorage.removeItem(STORAGE_KEYS.session);
+  fpUnlocked = false;
   closeStockAlertPanel();
   document.getElementById('username').value = '';
   document.getElementById('password').value = '';
@@ -939,12 +987,20 @@ function getOskInput() {
   const password = document.getElementById('password');
   const menuSearch = document.getElementById('menu-search');
   const barcodeInput = document.getElementById('barcode-input');
+  const voidAuthPassword = document.getElementById('void-auth-password');
+  const deleteAuthPassword = document.getElementById('delete-auth-password');
+  const fpAuthPassword = document.getElementById('fp-auth-password');
   const active = document.activeElement;
   if (active === password) return password;
   if (active === username) return username;
   if (active === menuSearch) return menuSearch;
   if (active === barcodeInput) return barcodeInput;
-  if (oskTargetEl && ['menu-search', 'barcode-input'].includes(oskTargetEl.id)) return oskTargetEl;
+  if (active === voidAuthPassword) return voidAuthPassword;
+  if (active === deleteAuthPassword) return deleteAuthPassword;
+  if (active === fpAuthPassword) return fpAuthPassword;
+  const targetId = oskTargetEl && oskTargetEl.id;
+  if (targetId === 'menu-search' || targetId === 'barcode-input') return oskTargetEl;
+  if (targetId === 'void-auth-password' || targetId === 'delete-auth-password' || targetId === 'fp-auth-password') return oskTargetEl;
   return oskTargetEl || username;
 }
 
@@ -1006,9 +1062,18 @@ function handleOskKey(key) {
     const target = getOskInput();
     if (target && (target.id === 'menu-search' || target.id === 'barcode-input')) {
       toggleOnScreenKeyboard();
-    } else {
-      login();
+      return;
     }
+    if (currentUser) {
+      if (target) {
+        if (target.id === 'void-auth-password') confirmVoidAuth();
+        else if (target.id === 'delete-auth-password') confirmDeleteAuth();
+        else if (target.id === 'fp-auth-password') confirmFpAuth();
+      }
+      toggleOnScreenKeyboard();
+      return;
+    }
+    login();
     return;
   }
   const char = /^[a-z]$/.test(key) ? (oskShiftOn ? key.toUpperCase() : key) : key;
@@ -1522,7 +1587,7 @@ function renderMenuGrid(grid, items, palette, categoryColor) {
   wrapper.className = 'menu-grid-viewport';
   const padX = 12;
   const gap = 10;
-  const tileH = 132;
+  const tileH = 100;
   const rowH = tileH + gap;
   grid.innerHTML = '';
   grid.appendChild(wrapper);
@@ -1815,6 +1880,8 @@ function addToCartItem(item, options, optionsPrice, note) {
     return;
   }
 
+  checkedOutSaleIds = [];
+
   const signature = JSON.stringify({ options: options || [], optionsPrice: optionsPrice || 0, note: note || '' });
   const existing = cart.find((entry) => entry.id === item.id && JSON.stringify({ options: entry.options || [], optionsPrice: entry.optionsPrice || 0, note: entry.note || '' }) === signature);
   if (existing) {
@@ -1831,6 +1898,35 @@ function addToCartItem(item, options, optionsPrice, note) {
   renderCart();
 }
 
+function getOccupiedTableCount() {
+  const sales = getFromStorage(STORAGE_KEYS.sales);
+  const now = new Date();
+  const seen = new Set();
+  sales.forEach((sale) => {
+    if (sale.savedOnly !== true || !sale.table) return;
+    const created = new Date(sale.createdAt);
+    if (created.getFullYear() !== now.getFullYear() ||
+        created.getMonth() !== now.getMonth() ||
+        created.getDate() !== now.getDate()) return;
+    seen.add(sale.table);
+  });
+  return seen.size;
+}
+
+function renderTableAlert() {
+  const el = document.getElementById('open-tables-alert');
+  if (!el) return;
+  const count = getOccupiedTableCount();
+  const tablesEnabled = !!getFeature('tables');
+  if (tablesEnabled && count > 0) {
+    el.classList.add('show');
+    el.textContent = `${count} table${count > 1 ? 's' : ''} to clear`;
+  } else {
+    el.classList.remove('show');
+    el.textContent = '';
+  }
+}
+
 function renderCart() {
   const cartItemsEl = document.getElementById('cart-items');
   const subtotalEl = document.getElementById('subtotal-value');
@@ -1839,6 +1935,8 @@ function renderCart() {
   const countEl = document.getElementById('cart-total-count');
 
   if (!cartItemsEl) return;
+
+  renderTableAlert();
 
   if (cart.length === 0) {
     cartItemsEl.innerHTML = '<div class="cart-empty">' +
@@ -1982,6 +2080,7 @@ function clearCart() {
   if (!cart.length) return;
   cart = [];
   pendingSavedOrderId = null;
+  checkedOutSaleIds = [];
   appliedPromo = null;
   appliedDiscount = null;
   cartCustomer = null;
@@ -2276,6 +2375,7 @@ function getPaymentsBreakdown() {
 function closePaymentModal() {
   document.getElementById('payment-modal').classList.add('hidden');
   hideFloatKeyboard();
+  checkedOutSaleIds = [];
 }
 
 let floatKeyInput = null;
@@ -2486,6 +2586,14 @@ function completeCheckout() {
     }
   }
 
+  if (checkedOutSaleIds.length) {
+    const removed = new Set(checkedOutSaleIds);
+    const kept = sales.filter((entry) => !removed.has(entry.id));
+    sales.length = 0;
+    sales.push(...kept);
+    checkedOutSaleIds = [];
+  }
+
   writeToStorage(STORAGE_KEYS.sales, sales);
   writeToStorage(STORAGE_KEYS.inventory, inventory);
   saveRecoverySnapshot();
@@ -2502,6 +2610,7 @@ function completeCheckout() {
   renderCart();
   renderDashboard();
   renderOrdersManager();
+  renderTablesPanel();
   closePaymentModal();
   showToast('Payment successful', 'success');
   if (getHardware('printer')) printReceipt(sale);
@@ -2647,6 +2756,8 @@ function saveOrder() {
     return;
   }
 
+  checkedOutSaleIds = [];
+
   const sales = getFromStorage(STORAGE_KEYS.sales);
   const rawSubtotal = getCartSubtotal();
   const promoAmt = getPromoDiscount(rawSubtotal);
@@ -2703,6 +2814,7 @@ function sendToTable() {
     showToast('No items in cart. Add items first.', 'error');
     return;
   }
+  checkedOutSaleIds = [];
   // Save order as savedOnly with table + waiter context; kitchen will start prepping
   // We'll reuse saveOrder logic but override to force kitchenStatus and ensure table/waiter
   const sales = getFromStorage(STORAGE_KEYS.sales);
@@ -2752,6 +2864,8 @@ function sendToTable() {
   renderOrdersManager();
   showToast('Order sent to table. Kitchen started.', 'success');
   logAudit('Order sent to table', `Invoice #${sale.invoice} · Table ${cartTable} · ${formatCurrency(sale.total)}`);
+  cartTable = null;
+  renderCartTableBadge();
 }
 
 function openSavedOrdersModal() {
@@ -2860,6 +2974,7 @@ function recallSavedOrder(saleId) {
 
   cart = loadedCart;
   pendingSavedOrderId = saleId;
+  checkedOutSaleIds = [];
   appliedPromo = sale.promo && sale.promo.id ? { ...sale.promo } : null;
   appliedDiscount = sale.discount && sale.discount.id ? { ...sale.discount } : null;
   cartCustomer = null;
@@ -7581,6 +7696,8 @@ function clearAudit() {
 }
 
 function renderSettings() {
+  const scroller = document.scrollingElement || document.documentElement;
+  const pos = { top: scroller.scrollTop, left: scroller.scrollLeft };
   const settings = getFromStorage(STORAGE_KEYS.settings);
   const config = settings || defaultSettings;
   document.getElementById('shop-name').value = config.shopName || '';
@@ -7605,13 +7722,69 @@ function renderSettings() {
   renderUserManagement();
   renderClosingsList();
   renderPurchaseList();
-  renderFeatureConfig();
   syncSettingsHero();
-  renderHardwareSettings();
   const terminalSystemInput = document.getElementById('terminal-system-input');
   if (terminalSystemInput) terminalSystemInput.value = getTerminalSystemLabel();
   const ipEl = document.getElementById('terminal-ip-display');
   if (ipEl) ipEl.textContent = formatTerminalIdentity();
+  requestAnimationFrame(() => {
+    if (scroller.scrollTop !== pos.top || scroller.scrollLeft !== pos.left) {
+      scroller.scrollTop = pos.top;
+      scroller.scrollLeft = pos.left;
+    }
+  });
+}
+
+function renderFullPackagePanel() {
+  renderHardwareSettings();
+  renderFullPackageList();
+  renderFeatureConfig();
+}
+
+function requestFpAuth() {
+  const errorEl = document.getElementById('fp-auth-error');
+  const input = document.getElementById('fp-auth-password');
+  if (!errorEl || !input) {
+    showToast('Full Package page is not ready. Reopen the app.', 'error');
+    return;
+  }
+  errorEl.textContent = '';
+  input.value = '';
+  document.getElementById('fp-auth-modal').classList.remove('hidden');
+  input.focus();
+}
+
+function closeFpAuthModal() {
+  const modal = document.getElementById('fp-auth-modal');
+  if (modal) modal.classList.add('hidden');
+}
+
+function confirmFpAuth() {
+  const input = document.getElementById('fp-auth-password');
+  const errorEl = document.getElementById('fp-auth-error');
+  if (!input || !errorEl) {
+    showToast('Full Package page is not ready. Reopen the app.', 'error');
+    return;
+  }
+  const entered = input.value.trim();
+  if (!entered) {
+    errorEl.textContent = 'Enter the owner password.';
+    return;
+  }
+  const users = getFromStorage(STORAGE_KEYS.users) || [];
+  const authorized = entered === FULL_PACKAGE_PASSWORD
+    || users.some((user) => ['superadmin', 'admin'].includes(user.role) && user.password === entered);
+  if (!authorized) {
+    errorEl.textContent = 'Incorrect owner password.';
+    logAudit('Full Package blocked', 'Incorrect owner password entered by ' + (currentUser ? currentUser.name : 'User'));
+    input.focus();
+    input.select();
+    return;
+  }
+  fpUnlocked = true;
+  document.getElementById('fp-auth-modal').classList.add('hidden');
+  if (currentUser) logAudit('Full Package opened', 'Feature activation page opened by ' + currentUser.name);
+  showPanel('fullpackage');
 }
 
 function formatTerminalIdentity() {
@@ -8017,56 +8190,6 @@ function refreshFeatureUI() {
   applyHardwareUI();
   const waiterField = document.querySelector('.waiter-info');
   if (waiterField) waiterField.classList.toggle('hidden', !features.waiters);
-  if (currentUser && document.getElementById('settings-panel') && document.getElementById('settings-panel').classList.contains('active')) {
-    renderSettings();
-  }
-  if (currentUser && document.getElementById('reports-panel') && document.getElementById('reports-panel').classList.contains('active')) {
-    renderReports();
-  }
-}
-
-function openFullPackage() {
-  if (!currentUser || !['superadmin', 'admin'].includes(currentUser.role)) {
-    showToast('Only the Owner can manage Full Package features.', 'error');
-    return;
-  }
-  showPanel('fullpackage');
-}
-
-function renderFullPackageAuth() {
-  const auth = document.getElementById('full-package-auth');
-  const controls = document.getElementById('full-package-controls');
-  if (!auth || !controls) return;
-  if (fullPackageUnlocked) {
-    auth.classList.add('hidden');
-    controls.classList.remove('hidden');
-    renderFullPackageList();
-    renderFeatureConfig();
-  } else {
-    auth.classList.remove('hidden');
-    controls.classList.add('hidden');
-    const input = document.getElementById('full-package-password');
-    if (input) {
-      input.value = '';
-      input.focus();
-    }
-    const errorEl = document.getElementById('full-package-error');
-    if (errorEl) errorEl.textContent = '';
-  }
-}
-
-function unlockFullPackage() {
-  const input = document.getElementById('full-package-password');
-  const errorEl = document.getElementById('full-package-error');
-  if ((input.value || '') === FULL_PACKAGE_PASSWORD) {
-    fullPackageUnlocked = true;
-    logAudit('Full Package unlocked', 'Full Package manager opened by ' + (currentUser ? currentUser.name : 'unknown'));
-    renderFullPackageAuth();
-  } else if (errorEl) {
-    errorEl.textContent = 'Incorrect activation password.';
-    input.focus();
-    input.select();
-  }
 }
 
 function renderFullPackageList() {
@@ -8093,9 +8216,29 @@ function renderFullPackageList() {
 
 function toggleFeature(key, value) {
   setFeature(key, value);
-  renderFullPackageList();
+  updateFullPackageRow(key, value);
   refreshFeatureUI();
   showToast(`${getFeatureTitle(key)} ${value ? 'activated' : 'deactivated'}`, value ? 'success' : 'info');
+}
+
+function updateFullPackageRow(key, value) {
+  const container = document.getElementById('full-package-list');
+  if (container) {
+    const row = container.querySelector(`.fp-row input[data-feature="${key}"]`);
+    if (row) {
+      const wrap = row.closest('.fp-row');
+      if (wrap) {
+        wrap.classList.toggle('fp-on', value);
+        const status = wrap.querySelector('.fp-status');
+        if (status) status.textContent = value ? 'On' : 'Off';
+      }
+    }
+  }
+  const countEl = document.getElementById('full-package-count');
+  if (countEl) {
+    const features = getFeatures();
+    countEl.textContent = `${FEATURE_DEFS.filter((def) => features[def.key]).length} / ${FEATURE_DEFS.length} active`;
+  }
 }
 
 function renderHardwareSettings() {
@@ -8125,13 +8268,33 @@ function renderHardwareSettings() {
 function toggleHardware(key, value) {
   if (currentUser && !['superadmin', 'admin'].includes(currentUser.role)) {
     showToast('Only the Owner can change hardware settings.', 'error');
-    renderHardwareSettings();
+    updateHardwareRow(key, !value);
     return;
   }
   setHardware(key, value);
-  renderHardwareSettings();
+  updateHardwareRow(key, value);
   applyHardwareUI();
   showToast(`${getHardwareTitle(key)} ${value ? 'enabled' : 'disabled'}`, value ? 'success' : 'info');
+}
+
+function updateHardwareRow(key, value) {
+  const container = document.getElementById('hardware-list');
+  if (!container) return;
+  const row = container.querySelector(`.fp-row input[data-hardware="${key}"]`);
+  if (row) {
+    const wrap = row.closest('.fp-row');
+    if (wrap) {
+      wrap.classList.toggle('fp-on', value);
+      const status = wrap.querySelector('.fp-status');
+      if (status) status.textContent = value ? 'On' : 'Off';
+    }
+  }
+  const hw = getHardwareSettings();
+  const count = HARDWARE_DEFS.filter((def) => hw[def.key]).length;
+  const line = container.querySelector('.fp-count-line');
+  if (line && line.firstChild && line.firstChild.nodeType === 3) {
+    line.firstChild.textContent = `${count} / ${HARDWARE_DEFS.length} hardware enabled`;
+  }
 }
 
 function applyHardwareUI() {
@@ -8386,7 +8549,7 @@ function renderFeatureConfig() {
     </div>`);
   }
 
-  if (features.waiters) {
+  {
     const waiters = getWaiters();
     parts.push(`<div class="card-panel fp-config-card">
       <div class="card-title-row"><span class="card-icon purple">👤</span><div><h3>Waiters</h3><p>Manage waiter names assigned to tables.</p></div></div>
@@ -8796,15 +8959,7 @@ function clearTableOrder(name) {
   const inventory = getFromStorage(STORAGE_KEYS.inventory);
   const menu = getFromStorage(STORAGE_KEYS.menu);
 
-  savedSale.items.forEach((item) => {
-    const menuItem = menu.find((m) => m.name === item.name);
-    if (menuItem) {
-      const row = findInventoryRow(inventory, menuItem.ingredients || []);
-      if (row) {
-        row.stock += item.qty; // add back the quantity
-      }
-    }
-  });
+  restockInventoryItems(inventory, menu, savedSale.items || []);
   writeToStorage(STORAGE_KEYS.inventory, inventory);
 
   // Delete the saved order
@@ -8815,9 +8970,107 @@ function clearTableOrder(name) {
 
   // Refresh panels
   renderTablesPanel();
+  renderTableAlert();
   renderKitchenPanel();
   renderDashboard();
   renderOrdersManager();
+}
+
+function restockInventoryItems(inventory, menu, items) {
+  items.forEach((item) => {
+    if (!item || item.voided) return;
+    const menuItem = menu.find((m) => m.name === item.name);
+    if (!menuItem) return;
+    const unit = item.qty || 1;
+    (menuItem.ingredients || []).forEach((ing) => {
+      const row = findInventoryRow(inventory, (ing && ing.name) || item.name);
+      if (row) row.stock += (Number(ing.qty) || 1) * unit;
+    });
+  });
+}
+
+function removeTableProduct(name, key) {
+  const orders = getActiveTableSales(name);
+  if (!orders.length) {
+    showToast('No active orders for this table.', 'error');
+    return;
+  }
+
+  let target;
+  try { target = JSON.parse(key); } catch (e) { return; }
+  const [targetId, targetOptions, targetNote] = target;
+
+  const sales = getFromStorage(STORAGE_KEYS.sales);
+  const inventory = getFromStorage(STORAGE_KEYS.inventory);
+  const menu = getFromStorage(STORAGE_KEYS.menu);
+  let removedName = null;
+  let removedQty = 0;
+
+  // Remove the ENTIRE product from every active order for this table
+  orders.forEach((sale) => {
+    const kept = [];
+    let saleChanged = false;
+    (sale.items || []).forEach((it) => {
+      const matches = it.id === targetId &&
+        JSON.stringify(it.options || []) === JSON.stringify(targetOptions || []) &&
+        (it.note || '') === (targetNote || '');
+      if (matches) {
+        removedName = it.name;
+        removedQty += it.qty || 1;
+        saleChanged = true;
+      } else {
+        kept.push(it);
+      }
+    });
+    if (!saleChanged) return;
+    sale.items = kept;
+    if (kept.length === 0) {
+      const idx = sales.findIndex((entry) => entry.id === sale.id);
+      if (idx > -1) sales.splice(idx, 1);
+    } else {
+      recomputeSavedSaleTotals(sale);
+    }
+  });
+
+  if (removedName === null) {
+    showToast('Product not found for this table.', 'error');
+    return;
+  }
+
+  // Return the removed product to inventory
+  restockInventoryItems(inventory, menu, [{ name: removedName, qty: removedQty }]);
+  writeToStorage(STORAGE_KEYS.sales, sales);
+  writeToStorage(STORAGE_KEYS.inventory, inventory);
+
+  const unitText = `${removedQty} ${removedQty === 1 ? 'unit' : 'units'}`;
+  showToast(`Removed ${removedName} (${unitText}) from ${name}.`, 'success');
+  if (currentUser) logAudit('Product removed', `Table ${name} · -${removedQty} ${removedName}`);
+
+  renderTablesPanel();
+  renderKitchenPanel();
+  renderDashboard();
+  renderOrdersManager();
+}
+
+function recomputeSavedSaleTotals(sale) {
+  const rawSubtotal = (sale.items || []).reduce((sum, it) =>
+    sum + ((Number(it.price) || 0) + (Number(it.optionsPrice) || 0)) * (it.qty || 1), 0);
+  const promoAmt = computeDealValue(sale.promo, rawSubtotal, sale.items || []);
+  const discAmt = computeDealValue(sale.discount, rawSubtotal, sale.items || []);
+  const discountTotal = Math.max(0, Math.min(rawSubtotal, promoAmt + discAmt));
+  const subtotal = Math.max(0, rawSubtotal - discountTotal);
+  const tax = subtotal * (getTaxRate() / 100);
+  const serviceCharge = getCartServiceCharge(subtotal);
+
+  sale.rawSubtotal = rawSubtotal;
+  sale.subtotal = subtotal;
+  sale.tax = tax;
+  sale.discountTotal = discountTotal;
+  sale.serviceCharge = serviceCharge;
+  if (sale.promo) sale.promo.amount = promoAmt;
+  if (sale.discount) sale.discount.amount = discAmt;
+  sale.total = subtotal + tax + serviceCharge + (sale.deliveryFee || 0);
+  sale.paid = sale.total;
 }
 
 function renderTablesPanel() {
@@ -8848,6 +9101,7 @@ function renderTablesPanel() {
 
   if (!tables.length) {
     container.innerHTML = '<div class="report-empty">No tables added yet. Add tables from Settings → Full Package → Dine-in tables.</div>';
+    renderTableAlert();
     return;
   }
 
@@ -8855,21 +9109,169 @@ function renderTablesPanel() {
     <div class="tables-grid">
       ${tables.map((name) => {
         const info = activeTables[name];
+        const products = info ? buildTableProductMap(getActiveTableSales(name)) : null;
         return `
-          <div class="table-card ${info ? 'occupied' : ''}" data-t="${escapeHtml(name)}" onclick="assignTableOrder(this.dataset.t)">
+          <div class="table-card ${info ? 'occupied' : ''}" data-t="${escapeHtml(name)}" onclick="checkoutTable(this.dataset.t)">
             <div class="table-card-head">
               <strong>${escapeHtml(name)}</strong>
               <span class="table-status">${info ? 'Occupied' : 'Free'}</span>
             </div>
             ${info
               ? `<div class="table-card-stats"><span>${info.count} order(s)</span><strong>${formatCurrency(info.total)}</strong>${info.waiter ? `<span class="waiter-badge">Waiter: ${escapeHtml(info.waiter)}</span>` : ''}</div>
+                ${products && products.size
+                  ? `<div class="table-card-products">${Array.from(products.entries()).map(([key, product]) => `
+                    <div class="table-card-product">
+                      <span class="tcp-name" title="${escapeHtml(product.name)} ×${product.qty}">${escapeHtml(product.name)} ×${product.qty}</span>
+                      <strong class="tcp-price">${formatCurrency(product.price * product.qty)}</strong>
+                    </div>`).join('')}</div>`
+                  : ''}
                 <div class="table-card-actions">
-                  <button class="action-btn danger small-btn" onclick="clearTableOrder('${escapeHtml(name)}')">Clear</button>
+                  <button class="action-btn primary small-btn" onclick="event.stopPropagation(); checkoutTable('${escapeHtml(name)}')">Checkout all</button>
+                  <button class="action-btn danger small-btn" onclick="event.stopPropagation(); clearTableOrder('${escapeHtml(name)}')">Clear</button>
                 </div>`
               : '<div class="table-card-stats muted">No active order</div>'}
           </div>`;
       }).join('')}
     </div>`;
+}
+
+function getActiveTableSales(name) {
+  const sales = getFromStorage(STORAGE_KEYS.sales);
+  const now = new Date();
+  return sales.filter((sale) => {
+    if (sale.savedOnly !== true || sale.refunded || !sale.table || sale.table !== name) return false;
+    const created = new Date(sale.createdAt);
+    return created.getFullYear() === now.getFullYear() &&
+      created.getMonth() === now.getMonth() &&
+      created.getDate() === now.getDate();
+  }).sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+}
+
+function buildTableProductMap(orders) {
+  const map = new Map();
+  orders.forEach((sale) => {
+    (sale.items || []).forEach((item) => {
+      const key = JSON.stringify([item.id, item.options || [], item.note || '']);
+      const price = (Number(item.price) || 0) + (Number(item.optionsPrice) || 0);
+      if (map.has(key)) {
+        const existing = map.get(key);
+        existing.qty += item.qty || 1;
+      } else {
+        map.set(key, { id: item.id, name: item.name || 'Item', qty: item.qty || 1, price });
+      }
+    });
+  });
+  return map;
+}
+
+let tableCheckoutPending = null;
+
+function checkoutTable(name) {
+  const orders = getActiveTableSales(name);
+  if (!orders.length) {
+    showToast('No active orders for this table.', 'error');
+    return;
+  }
+  tableCheckoutPending = name;
+
+  const productMap = buildTableProductMap(orders);
+
+  const productsHtml = Array.from(productMap.entries()).map(([key, entry]) => `
+    <div class="review-item">
+      <button type="button" class="review-item-remove" data-table="${escapeHtml(name)}" data-key="${escapeHtml(key)}" title="Remove ${escapeHtml(entry.name)}" onclick="removeReviewProduct(this.dataset.table, this.dataset.key, event)">×</button>
+      <span class="review-item-name">${escapeHtml(entry.name)} ×${entry.qty}</span>
+      <strong>${formatCurrency(entry.price * entry.qty)}</strong>
+    </div>`).join('');
+
+  const ordersHtml = orders.map((sale) => `
+    <span class="review-invoice-chip">#${sale.invoice}</span>`).join('');
+
+  const totalQty = Array.from(productMap.values()).reduce((sum, entry) => sum + entry.qty, 0);
+  const grandTotal = orders.reduce((sum, sale) => sum + (Number(sale.total) || 0), 0);
+
+  document.getElementById('table-checkout-title').textContent = `Checkout · ${name}`;
+  document.getElementById('table-checkout-hint').textContent = `${orders.length} order(s) · ${totalQty} item(s) loading into one payment`;
+  document.getElementById('table-checkout-list').innerHTML = `
+    <div class="review-orders-chips">${ordersHtml}</div>
+    <div class="review-products">${productsHtml}</div>
+    <div class="review-total-row">
+      <span>Grand total</span>
+      <strong>${formatCurrency(grandTotal)}</strong>
+    </div>`;
+  document.getElementById('table-checkout-modal').classList.remove('hidden');
+}
+
+function removeReviewProduct(name, key, evt) {
+  if (evt) evt.stopPropagation();
+  removeTableProduct(name, key);
+  const orders = getActiveTableSales(name);
+  if (!orders.length) {
+    closeTableCheckoutModal();
+    showToast(`Table ${name} cleared — nothing left to checkout.`, 'success');
+  } else {
+    checkoutTable(name);
+  }
+}
+
+function closeTableCheckoutModal() {
+  document.getElementById('table-checkout-modal').classList.add('hidden');
+  tableCheckoutPending = null;
+}
+
+function confirmTableCheckout() {
+  const name = tableCheckoutPending;
+  if (!name) return;
+  const orders = getActiveTableSales(name);
+  if (!orders.length) {
+    closeTableCheckoutModal();
+    showToast('No active orders for this table.', 'error');
+    return;
+  }
+
+  const menu = getFromStorage(STORAGE_KEYS.menu);
+  const loadedCart = [];
+
+  orders.forEach((sale) => {
+    sale.items.forEach((savedItem) => {
+      const menuItem = menu.find((entry) => entry.id === savedItem.id);
+      const entry = menuItem
+        ? { ...menuItem, qty: savedItem.qty, options: savedItem.options || [], optionsPrice: savedItem.optionsPrice || 0, note: savedItem.note || '' }
+        : { id: savedItem.id, name: savedItem.name, price: savedItem.price, qty: savedItem.qty, ingredients: [], options: savedItem.options || [], optionsPrice: savedItem.optionsPrice || 0, note: savedItem.note || '' };
+
+      const signature = JSON.stringify({ options: entry.options, optionsPrice: entry.optionsPrice, note: entry.note });
+      const existing = loadedCart.find((item) => item.id === entry.id && JSON.stringify({ options: item.options, optionsPrice: item.optionsPrice, note: item.note }) === signature);
+      if (existing) {
+        existing.qty += entry.qty;
+      } else {
+        loadedCart.push(entry);
+      }
+    });
+  });
+
+  const unavailable = loadedCart.filter((entry) => !canMakeItem(entry, entry.qty)).map((entry) => entry.name);
+  if (unavailable.length) {
+    showToast(`Not enough inventory for: ${unavailable.join(', ')}.`, 'error');
+    return;
+  }
+
+  cart = loadedCart;
+  pendingSavedOrderId = null;
+  checkedOutSaleIds = orders.map((entry) => entry.id);
+  appliedPromo = null;
+  appliedDiscount = null;
+  cartCustomer = null;
+  cartLoyaltyPoints = 0;
+  cartTable = name;
+  cartOrderType = 'dinein';
+  cartTip = 0;
+  cartDelivery = { address: '', riderName: '', riderPhone: '' };
+
+  closeTableCheckoutModal();
+  showPanel('pos');
+  renderCartTableBadge();
+  renderCart();
+  openPaymentModal();
+  showToast(`Loaded all ${orders.length} order(s) for ${name} — ready for payment.`);
 }
 
 function assignTableOrder(name) {
@@ -11037,9 +11439,9 @@ function deleteMarkedInventory() {
 }
 
 function refreshLivePanels() {
-  checkShiftTimers();
-  checkCashierShiftEnded();
-  renderShiftGate();
+  lightRefresh();
+  const scroller = document.scrollingElement || document.documentElement;
+  const pos = { top: scroller.scrollTop, left: scroller.scrollLeft };
   if (document.getElementById('dashboard-panel')?.classList.contains('active')) renderDashboard();
   if (document.getElementById('orders-panel')?.classList.contains('active')) renderOrdersManager();
   if (document.getElementById('bookorders-panel')?.classList.contains('active')) renderBookOrdersPanel();
@@ -11049,24 +11451,39 @@ function refreshLivePanels() {
   if (document.getElementById('leftover-panel')?.classList.contains('active')) renderLeftoverManager();
   if (document.getElementById('promos-panel')?.classList.contains('active')) renderPromosManager();
   if (document.getElementById('audit-panel')?.classList.contains('active')) renderAuditManager();
-  renderConnectedSystems();
+  if (document.getElementById('fullpackage-panel')?.classList.contains('active')) renderFullPackagePanel();
   if (document.getElementById('tables-panel')?.classList.contains('active')) renderTablesPanel();
   if (document.getElementById('kitchen-panel')?.classList.contains('active')) renderKitchenPanel();
   if (document.getElementById('purchaseorders-panel')?.classList.contains('active')) renderPurchaseOrdersPanel();
+  requestAnimationFrame(() => {
+    if (scroller.scrollTop !== pos.top || scroller.scrollLeft !== pos.left) {
+      scroller.scrollTop = pos.top;
+      scroller.scrollLeft = pos.left;
+    }
+  });
+}
+
+function lightRefresh() {
+  checkShiftTimers();
+  checkCashierShiftEnded();
+  renderShiftGate();
+  renderConnectedSystems();
   checkLowStockNotification(false);
 }
 
 async function pollServerSync() {
+  if (!serverOnline && Date.now() < serverPollBackoffUntil) return;
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 3000);
-    const res = await fetch('/api/data', { signal: controller.signal, cache: 'no-store' });
+    const res = await fetch(API_BASE + '/api/data', { signal: controller.signal, cache: 'no-store' });
     clearTimeout(timer);
     if (!res.ok) throw new Error('Server unavailable');
     const payload = await res.json();
     const data = (payload && payload.data) || {};
     if (!serverOnline) {
       serverOnline = true;
+      serverPollBackoffUntil = 0;
       connectServerEvents();
       sendHeartbeat();
       pollSystems();
@@ -11076,7 +11493,7 @@ async function pollServerSync() {
     }
     const sig = JSON.stringify(Object.entries(data).sort((a, b) => (a[0] < b[0] ? -1 : 1)).map(([k, v]) => [k, v]));
     if (sig === lastPollJson) {
-      refreshLivePanels();
+      lightRefresh();
       return;
     }
     lastPollJson = sig;
@@ -11092,6 +11509,7 @@ async function pollServerSync() {
     if (changed) refreshLivePanels();
   } catch (error) {
     serverOnline = false;
+    serverPollBackoffUntil = Date.now() + 15000;
   }
 }
 
@@ -11162,7 +11580,7 @@ function bootReady() {
     const el = document.getElementById(id);
     if (el) el.addEventListener('focus', () => { oskTargetEl = el; });
   });
-  ['menu-search', 'barcode-input'].forEach((id) => {
+  ['menu-search', 'barcode-input', 'void-auth-password', 'delete-auth-password', 'fp-auth-password'].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('focus', () => { oskTargetEl = el; });
   });
@@ -11172,6 +11590,18 @@ function bootReady() {
   } catch (error) {
     localStorage.removeItem(STORAGE_KEYS.session);
     document.documentElement.classList.remove('app-logged-in');
+  }
+  if (savedSession && typeof savedSession === 'object') {
+    const savedUsers = getFromStorage(STORAGE_KEYS.users) || [];
+    if (savedUsers.length > 0) {
+      const stillValid = savedUsers.find((u) => u.username === savedSession.username && u.password === savedSession.password);
+      const validRole = stillValid && ['superadmin', 'admin', 'manager', 'cashier', 'audit'].includes(stillValid.role);
+      if (!validRole) {
+        savedSession = null;
+        localStorage.removeItem(STORAGE_KEYS.session);
+        document.documentElement.classList.remove('app-logged-in');
+      }
+    }
   }
 
   const VALID_REPORT_TABS = ['sales', 'invoice', 'summary', 'totals', 'analysis', 'inventory', 'menu', 'orders', 'tax', 'payments', 'stock', 'products', 'daily', 'weekly', 'transactions', 'customers', 'refunds', 'purchases', 'closings', 'price', 'shift', 'void', 'leftover', 'promos', 'tables', 'kitchen', 'delivery', 'modifiers', 'tips', 'purchaseorders', 'branches', 'systems', 'receipts', 'bookorders'];
@@ -11224,6 +11654,15 @@ function bootReady() {
     });
   }
 
+  const fpAuthPasswordEl = document.getElementById('fp-auth-password');
+  if (fpAuthPasswordEl) {
+    fpAuthPasswordEl.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        confirmFpAuth();
+      }
+    });
+  }
   document.getElementById('void-auth-password').addEventListener('keydown', (event) => {
     if (event.key === 'Enter') {
       event.preventDefault();
@@ -11298,12 +11737,12 @@ function bootReady() {
     button.addEventListener('click', () => setReportTab(button.dataset.report));
   });
 
-  setInterval(() => { pollServerSync(); refreshLivePanels(); }, 5000);
+  setInterval(() => { pollServerSync(); lightRefresh(); }, 5000);
   setInterval(() => { sendHeartbeat(); pollSystems(); }, 10000);
-  window.addEventListener('storage', refreshLivePanels);
-  window.addEventListener('focus', refreshLivePanels);
+  window.addEventListener('storage', lightRefresh);
+  window.addEventListener('focus', lightRefresh);
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) refreshLivePanels();
+    if (!document.hidden) lightRefresh();
   });
   window.addEventListener('resize', updateMenuScrollButtons);
   setInterval(applyTimeGreeting, 30000);
@@ -11313,7 +11752,7 @@ function bootReady() {
     if (serverOnline) {
       try {
         const payload = JSON.stringify({ id: getTerminalId(), system: getTerminalSystem(), user: currentUser ? currentUser.name : '', status: 'offline' });
-        navigator.sendBeacon('/api/heartbeat', new Blob([payload], { type: 'application/json' }));
+        navigator.sendBeacon(API_BASE + '/api/heartbeat', new Blob([payload], { type: 'application/json' }));
       } catch (error) {}
     }
   });
@@ -11339,7 +11778,8 @@ function bootReady() {
   });
 
   const savedPanel = localStorage.getItem(STORAGE_KEYS.panel);
-  const startPanel = savedPanel && document.getElementById(savedPanel + '-panel') ? savedPanel : 'dashboard';
+  const validSavedPanel = savedPanel && savedPanel !== 'fullpackage' && document.getElementById(savedPanel + '-panel');
+  const startPanel = validSavedPanel ? savedPanel : 'dashboard';
 
   if (savedSession) {
     currentUser = savedSession;

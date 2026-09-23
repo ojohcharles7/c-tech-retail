@@ -14,9 +14,28 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="style.css?v=20260923n" />
+    <style>
+      .fatal-error-chip {
+        position: fixed;
+        left: 12px;
+        bottom: 12px;
+        z-index: 99999;
+        max-width: 90vw;
+        padding: 10px 14px;
+        background: #7f1d1d;
+        color: #fff;
+        font-size: 13px;
+        font-family: monospace;
+        border-radius: 8px;
+        box-shadow: 0 6px 18px rgba(0,0,0,.35);
+        display: none;
+      }
+      .fatal-error-chip.show { display: block; }
+    </style>
   </head>
   <body>
+    <div id="fatal-error-chip" class="fatal-error-chip"></div>
     <div id="login-view" class="view">
       <div class="login-shell">
         <div class="login-card login-split">
@@ -71,20 +90,6 @@
               <button type="button" class="osk-toggle-btn" onclick="toggleOnScreenKeyboard(this)" title="Show on-screen keyboard" aria-label="Toggle on-screen keyboard" aria-expanded="false">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4.5" width="20" height="15" rx="2.5"/><path d="M6 8.5h.01M9.5 8.5h.01M13 8.5h.01M16.5 8.5h.01M18 8.5h.01"/><path d="M6 12.5h.01M9.5 12.5h.01M13 12.5h.01M16.5 12.5h.01M18 12.5h.01"/><path d="M8 16h8"/></svg>
               </button>
-            </div>
-            <button type="button" class="locate-server-btn" onclick="toggleLocateServer()">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>
-              <span>Locate server on this network</span>
-            </button>
-            <div id="locate-server-panel" class="locate-server-panel hidden">
-              <div class="locate-row">
-                <input id="locate-subnet" type="text" placeholder="e.g. 192.168.1" autocomplete="off" />
-                <span class="locate-port-sep">:</span>
-                <input id="locate-port" type="number" min="1" max="65535" placeholder="5501" autocomplete="off" />
-                <button type="button" class="action-btn primary" onclick="scanForServers()">Scan</button>
-              </div>
-              <p class="form-hint">Scans hosts 1–254 on the subnet for a FasterFood POS server.</p>
-              <div id="locate-results" class="locate-results"></div>
             </div>
             <div class="login-built">
                 <span>Built by</span>
@@ -147,6 +152,7 @@
           <button class="nav-btn" data-panel="reports"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg><span>Reports</span></button>
           <button class="nav-btn shift-nav-btn" id="shift-nav-btn" data-panel="shift"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>Shifts</span></button>
           <button class="nav-btn" data-panel="audit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/></svg><span>Audit trail</span></button>
+          <button class="nav-btn hidden" data-panel="fullpackage"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 15 8l6 1-4.5 4.3 1.1 6L12 16.3 6.4 19.3l1.1-6L3 9l6-1z"/><rect x="9" y="12" width="6" height="6" rx="1"/><path d="M12 13v4"/></svg><span>Full Package</span></button>
           <button class="nav-btn" data-panel="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>Settings</span></button>
         </nav>
 
@@ -260,7 +266,10 @@
 
             <aside class="cart-panel">
               <div class="cart-header">
-                <h3>Current order</h3>
+                <div class="cart-head-left">
+                  <h3>Current order</h3>
+                  <span id="open-tables-alert" class="table-alert" title="Open tables with uncleared orders. Tap to view tables." onclick="showPanel('tables')" role="status"></span>
+                </div>
                 <span id="cart-total-count">0 items</span>
                 <div class="waiter-info">
                   <span>Waiter:</span>
@@ -1394,6 +1403,29 @@
               </div>
             </div>
 
+            <div class="card-panel full-package-card">
+              <div class="card-title-row">
+                <span class="card-icon amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 15 8l6 1-4.5 4.3 1.1 6L12 16.3 6.4 19.3l1.1-6L3 9l6-1z"/></svg></span>
+                <div>
+                  <h3>Full Package features</h3>
+                  <p>Activate extra features: tables, kitchen, delivery, modifiers, tips, reordering, photos, online menu, branches and receipts. Protected by the owner password.</p>
+                </div>
+                <button class="action-btn primary" onclick="requestFpAuth()">Manage</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="fullpackage-panel" class="panel">
+          <div class="panel-head">
+            <div>
+              <span class="eyebrow">Owner only</span>
+              <h2>Full Package features</h2>
+              <p class="panel-sub">Activate and configure extra features. Protected by the owner password.</p>
+            </div>
+          </div>
+
+          <div class="settings-layout">
             <div class="card-panel hardware-card">
               <div class="card-title-row">
                 <span class="card-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="12" rx="2"/><path d="M6 11h2M10 11h2M6 14h6"/><path d="M18 12h.01"/></svg></span>
@@ -1409,56 +1441,14 @@
               <div class="card-title-row">
                 <span class="card-icon amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 15 8l6 1-4.5 4.3 1.1 6L12 16.3 6.4 19.3l1.1-6L3 9l6-1z"/></svg></span>
                 <div>
-                  <h3>Full Package</h3>
-                  <p>Activate extra features: tables, kitchen, delivery, modifiers, tips, reordering, photos, online menu, branches and receipts.</p>
-                </div>
-                <button class="action-btn primary" onclick="openFullPackage()">Manage</button>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section id="fullpackage-panel" class="panel">
-          <div class="panel-head">
-            <div>
-              <span class="eyebrow">Full Package</span>
-              <h2>Full Package manager</h2>
-              <p class="panel-head-sub">Activate extra features for your store</p>
-            </div>
-          </div>
-
-          <div id="full-package-auth" class="card-panel full-package-auth-card">
-            <div class="card-title-row">
-              <span class="card-icon amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 15 8l6 1-4.5 4.3 1.1 6L12 16.3 6.4 19.3l1.1-6L3 9l6-1z"/></svg></span>
-              <div>
-                <h3>Owner access</h3>
-                <p>Enter the activation password to manage the Full Package features.</p>
-              </div>
-            </div>
-            <div class="reset-pass-field">
-              <div class="input-icon">
-                <span>🔒</span>
-                <input id="full-package-password" type="password" placeholder="Activation password" autocomplete="off" onkeydown="if(event.key==='Enter'){unlockFullPackage();}" />
-              </div>
-            </div>
-            <p id="full-package-error" class="form-error"></p>
-            <div class="card-actions">
-              <button class="action-btn primary" onclick="unlockFullPackage()">Unlock</button>
-            </div>
-          </div>
-
-          <div id="full-package-controls" class="hidden">
-            <div class="card-panel">
-              <div class="card-title-row">
-                <div>
-                  <h3>Features</h3>
-                  <p>Toggle each feature on or off. Changes apply immediately.</p>
+                  <h3>Activate features</h3>
+                  <p>Activate extra features: tables, kitchen, delivery, modifiers, tips, reordering, photos, online menu, branches and receipts. Changes apply immediately.</p>
                 </div>
                 <span class="group-count" id="full-package-count"></span>
               </div>
               <div id="full-package-list" class="fp-list"></div>
+              <div id="full-package-config"></div>
             </div>
-            <div id="full-package-config"></div>
           </div>
         </section>
 
@@ -1567,6 +1557,26 @@
       </div>
     </div>
 
+    <div id="fp-auth-modal" class="modal hidden">
+      <div class="modal-card">
+        <div class="modal-head">
+          <h3>Full Package</h3>
+          <button class="close-btn" onclick="closeFpAuthModal()">×</button>
+        </div>
+        <div class="modal-body">
+          <p class="form-hint">This page lets the Owner activate and configure extra features. Enter the owner password to continue.</p>
+          <div class="void-auth-box">
+            <input id="fp-auth-password" type="password" placeholder="Owner password" autocomplete="off" />
+            <div class="void-auth-error" id="fp-auth-error"></div>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="action-btn secondary" onclick="closeFpAuthModal()">Cancel</button>
+          <button class="action-btn primary" onclick="confirmFpAuth()">Unlock Full Package</button>
+        </div>
+      </div>
+    </div>
+
     <div id="void-auth-modal" class="modal hidden">
       <div class="modal-card">
         <div class="modal-head">
@@ -1617,6 +1627,25 @@
         <div class="modal-body">
           <p class="form-hint">Orders saved without payment. Tap one to load it into the cart and collect payment.</p>
           <div id="saved-orders-list" class="mini-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="table-checkout-modal" class="modal hidden">
+      <div class="modal-card">
+        <div class="modal-head">
+          <h3 id="table-checkout-title">Checkout table</h3>
+          <button class="close-btn" onclick="closeTableCheckoutModal()">×</button>
+        </div>
+
+        <div class="modal-body">
+          <p class="form-hint" id="table-checkout-hint"></p>
+          <div id="table-checkout-list" class="mini-list"></div>
+        </div>
+
+        <div class="modal-actions">
+          <button class="action-btn" onclick="closeTableCheckoutModal()">Cancel</button>
+          <button class="action-btn primary" onclick="confirmTableCheckout()">Confirm &amp; pay</button>
         </div>
       </div>
     </div>
@@ -2266,6 +2295,6 @@
       </div>
     </div>
 
-    <script src="pos.js"></script>
+    <script src="pos.js?v=20260923s"></script>
   </body>
 </html>
