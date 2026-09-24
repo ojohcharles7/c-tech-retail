@@ -2347,6 +2347,11 @@ function openPaymentModal() {
     return;
   }
 
+  const confirmLabel = document.getElementById('confirm-pay-label');
+  if (confirmLabel) confirmLabel.textContent = isMobileView() ? 'Complete payment' : 'Confirm payment';
+
+  if (isMobileView()) closeMobileCart();
+
   document.getElementById('payment-amount').textContent = formatCurrency(total);
   renderPaymentMethods();
   renderTipsSection();
@@ -2490,6 +2495,16 @@ function floatKey(key) {
   kb.addEventListener('mousedown', (e) => e.preventDefault());
   kb.addEventListener('mouseenter', () => { floatKeyboardHover = true; });
   kb.addEventListener('mouseleave', () => { floatKeyboardHover = false; });
+})();
+
+(function initPaymentModalScroll() {
+  const payModal = document.getElementById('payment-modal');
+  const payBody = payModal ? payModal.querySelector('.modal-body') : null;
+  if (!payBody) return;
+  payBody.addEventListener('scroll', () => {
+    if (floatKeyboardHover) return;
+    hideFloatKeyboard();
+  });
 })();
 
 function buildSaleMeta() {

@@ -8277,6 +8277,31 @@ html[data-theme="dark"] .panel-sub {
     display: none;
   }
 
+  .modal {
+    z-index: 90;
+  }
+
+  #payment-modal .modal-card {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    max-height: 92vh;
+    height: auto;
+  }
+
+  #payment-modal .modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #payment-modal .modal-actions {
+    flex: none;
+    border-top: 1px solid var(--line);
+    background: var(--panel-alt);
+  }
+
   .mobile-cart-backdrop {
     display: block;
     position: fixed;
