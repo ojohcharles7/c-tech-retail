@@ -93,7 +93,7 @@
             </div>
             <div class="login-built">
                 <span>Built by</span>
-                <span class="built-name">CHARITEC CONCEPTS</span>
+                <span class="built-name">CHARITECH CONCEPTS</span>
                 <span class="built-phone">07036982566</span>
               </div>
             <div id="login-error" class="login-error"></div>
@@ -809,7 +809,7 @@
               </div>
             </div>
             <div class="card-actions">
-              <button class="action-btn primary" onclick="openClosingModal()">Close day</button>
+              <button id="open-closing-btn" class="action-btn primary" onclick="openClosingModal()">Close day</button>
             </div>
             <div id="closings-list" class="mini-list"></div>
           </div>
@@ -2021,7 +2021,12 @@
         <div class="modal-body">
           <p class="form-hint"><span id="closing-date"></span> · <strong id="closing-sales-count"></strong> · Expected total <strong id="closing-total"></strong></p>
           <div id="closing-methods" class="closing-methods"></div>
+          <button id="closing-count-btn" class="action-btn closing-count-btn" onclick="updateClosingDifference()">Counted</button>
           <div class="closing-summary">
+            <div class="closing-summary-row">
+              <span>Expected total</span>
+              <strong id="closing-expected">₦0</strong>
+            </div>
             <div class="closing-summary-row">
               <span>Counted total</span>
               <strong id="closing-counted">₦0</strong>
@@ -2035,7 +2040,7 @@
         </div>
         <div class="modal-actions">
           <button class="action-btn secondary" onclick="closeClosingModal()">Cancel</button>
-          <button class="action-btn primary" onclick="saveClosing()">Close day</button>
+          <button class="action-btn primary" onclick="saveClosing()">Save reconciliation</button>
         </div>
       </div>
     </div>

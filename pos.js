@@ -7080,24 +7080,60 @@ function refundSale(saleId) {
   logAudit('Refund', `Invoice #${sale.invoice} refunded · ${formatCurrency(sale.total)}`);
 }
 
+function getLastClosing() {
+  const closings = getFromStorage(STORAGE_KEYS.closings);
+  if (!closings || !closings.length) return null;
+  return closings.slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+}
+
 function getClosingTotals() {
-  const sales = getTodaySales().filter((sale) => !sale.savedOnly);
+  const lastClosing = getLastClosing();
+  let sales;
+  if (lastClosing) {
+    const cutoff = new Date(lastClosing.createdAt).getTime();
+    sales = getFromStorage(STORAGE_KEYS.sales).filter((sale) => {
+      if (sale.savedOnly) return false;
+      return new Date(sale.createdAt).getTime() > cutoff;
+    });
+  } else {
+    sales = getTodaySales().filter((sale) => !sale.savedOnly);
+  }
   const byMethod = {};
+  const sellerMap = {};
   let subtotal = 0, tax = 0, total = 0;
   sales.forEach((sale) => {
+    const system = sale.system || 'Unassigned';
+    const cashier = sale.cashier || 'Unassigned';
+    const sellerKey = `${system} · ${cashier}`;
+    if (!sellerMap[sellerKey]) {
+      sellerMap[sellerKey] = { name: sellerKey, system, cashier, sales: 0, byMethod: {}, subtotal: 0, tax: 0, total: 0 };
+    }
+    const seller = sellerMap[sellerKey];
     (sale.payments || []).forEach((payment) => {
       const method = payment.method || 'Other';
       byMethod[method] = (byMethod[method] || 0) + payment.amount;
+      seller.byMethod[method] = (seller.byMethod[method] || 0) + payment.amount;
     });
-    subtotal += Number.isFinite(sale.subtotal) ? sale.subtotal : sale.total - getSaleTax(sale);
-    tax += getSaleTax(sale);
+    const sSub = Number.isFinite(sale.subtotal) ? sale.subtotal : sale.total - getSaleTax(sale);
+    const sTax = getSaleTax(sale);
+    subtotal += sSub;
+    tax += sTax;
     total += sale.total;
+    seller.sales += 1;
+    seller.subtotal += sSub;
+    seller.tax += sTax;
+    seller.total += sale.total;
   });
-  return { sales: sales.length, byMethod, subtotal, tax, total };
+  const sellers = Object.values(sellerMap).sort((a, b) => {
+    const sysCmp = a.system.localeCompare(b.system, undefined, { numeric: true });
+    if (sysCmp !== 0) return sysCmp;
+    return a.cashier.localeCompare(b.cashier, undefined, { numeric: true });
+  });
+  return { sales: sales.length, byMethod, subtotal, tax, total, sellers, closed: !!getLastClosing() };
 }
 
 function openClosingModal() {
-  const { sales, byMethod, subtotal, tax, total } = getClosingTotals();
+  const { sales, byMethod, subtotal, tax, total, sellers, closed } = getClosingTotals();
   const dateEl = document.getElementById('closing-date');
   const countEl = document.getElementById('closing-sales-count');
   const totalEl = document.getElementById('closing-total');
@@ -7105,34 +7141,127 @@ function openClosingModal() {
   if (countEl) countEl.textContent = `${sales} transaction(s)`;
   if (totalEl) totalEl.textContent = formatCurrency(total);
 
-  const methods = getPaymentMethods();
+  const allMethods = getPaymentMethods();
   const methodList = document.getElementById('closing-methods');
-  methodList.innerHTML = methods.map((method) => `
-    <div class="closing-method">
-      <div class="closing-method-info">
-        <strong>${method}</strong>
-        <span>Expected ${formatCurrency(byMethod[method] || 0)}</span>
+  methodList.innerHTML = (sellers && sellers.length ? sellers : []).map((seller, i) => {
+    const methods = allMethods.slice().sort((a, b) => (seller.byMethod[b] || 0) - (seller.byMethod[a] || 0));
+    const used = methods.filter((method) => (seller.byMethod[method] || 0) > 0);
+    const rows = (used.length ? used : methods).map((method) => {
+      const expected = seller.byMethod[method] || 0;
+      return `
+      <div class="closing-method">
+        <div class="closing-method-info">
+          <strong>${escapeHtml(method)}</strong>
+          <span>Expected ${formatCurrency(expected)}</span>
+        </div>
+        <div class="closing-method-count">
+          <input type="number" min="0" step="0.01" placeholder="Counted" class="closing-count" data-seller-i="${i}" data-method="${escapeHtml(method)}" />
+          <span class="closing-method-diff" data-method="${escapeHtml(method)}"></span>
+        </div>
       </div>
-      <input type="number" min="0" step="0.01" placeholder="Counted amount" class="closing-count" data-method="${method}" oninput="updateClosingDifference()" />
+    `;
+    }).join('');
+    return `
+    <div class="closing-seller" data-seller-i="${i}">
+      <div class="closing-seller-head">
+        <div>
+          <strong class="closing-seller-name">${escapeHtml(seller.name)}</strong>
+          <span class="closing-seller-sub">${seller.sales} transaction(s) · Expected ${formatCurrency(seller.total)}</span>
+        </div>
+        <strong class="closing-seller-diff"></strong>
+      </div>
+      <div class="closing-seller-methods">${rows}</div>
+      <div class="closing-seller-summary" data-seller-summary="${i}"></div>
     </div>
-  `).join('');
-  document.getElementById('closing-error').textContent = '';
-  updateClosingDifference();
+  `;
+  }).join('');
+  const countBtn = document.getElementById('closing-count-btn');
+  if (countBtn) countBtn.style.display = '';
+  const errorEl = document.getElementById('closing-error');
+  if (errorEl) errorEl.textContent = closed ? 'Showing only the amounts tilled since the last reconciliation — count and save below.' : '';
+  resetClosingForm(total);
   document.getElementById('closing-modal').classList.remove('hidden');
 }
 
-function updateClosingDifference() {
-  const { total } = getClosingTotals();
-  let counted = 0;
-  document.querySelectorAll('#closing-methods .closing-count').forEach((input) => {
-    counted += Number(input.value) || 0;
-  });
+function resetClosingForm(total) {
+  const expectedEl = document.getElementById('closing-expected');
   const countedEl = document.getElementById('closing-counted');
   const diffEl = document.getElementById('closing-diff');
   const diffLabel = document.getElementById('closing-diff-label');
   const diffRow = document.getElementById('closing-diff-row');
-  if (countedEl) countedEl.textContent = formatCurrency(counted);
-  const diff = counted - total;
+  if (expectedEl) expectedEl.textContent = formatCurrency(total || 0);
+  if (countedEl) countedEl.textContent = formatCurrency(0);
+  if (diffEl) diffEl.textContent = formatCurrency(0);
+  if (diffLabel) diffLabel.textContent = 'Difference';
+  if (diffRow) diffRow.classList.remove('shortage', 'excess');
+  document.querySelectorAll('#closing-methods .closing-count').forEach((input) => {
+    input.value = '';
+  });
+  document.querySelectorAll('#closing-methods .closing-method-diff').forEach((el) => {
+    el.textContent = '';
+    el.className = 'closing-method-diff';
+  });
+  document.querySelectorAll('#closing-methods .closing-seller-diff').forEach((el) => {
+    el.textContent = '';
+    el.className = 'closing-seller-diff';
+  });
+  document.querySelectorAll('#closing-methods .closing-seller-summary').forEach((el) => {
+    el.innerHTML = '';
+  });
+}
+
+function updateClosingDifference() {
+  const { total, sellers } = getClosingTotals();
+  let countedTotal = 0;
+  document.querySelectorAll('#closing-methods .closing-seller').forEach((section) => {
+    const i = section.dataset.sellerI;
+    const seller = sellers && sellers[i];
+    const sExpected = (seller && seller.total) || 0;
+    let counted = 0;
+    section.querySelectorAll('.closing-count').forEach((input) => {
+      const value = Number(input.value) || 0;
+      counted += value;
+      const method = input.dataset.method;
+      const expected = (seller && seller.byMethod[method]) || 0;
+      const diffEl = section.querySelector('.closing-method-diff[data-method="' + method + '"]');
+      if (diffEl) {
+        const hasValue = input.value !== '';
+        const diff = value - expected;
+        diffEl.textContent = hasValue ? (diff > 0 ? '+' : '') + formatCurrency(diff) : '';
+        diffEl.className = 'closing-method-diff' + (hasValue ? (diff > 0 ? ' excess' : diff < 0 ? ' shortage' : ' even') : '');
+      }
+    });
+    countedTotal += counted;
+    const sDiff = counted - sExpected;
+    const anyFilled = Array.from(section.querySelectorAll('.closing-count')).some((inp) => inp.value !== '');
+    const sEl = section.querySelector('.closing-seller-diff');
+    if (sEl) {
+      if (anyFilled) {
+        sEl.textContent = (sDiff > 0 ? '+' : sDiff < 0 ? '-' : '') + formatCurrency(Math.abs(sDiff));
+        sEl.className = 'closing-seller-diff ' + (sDiff > 0 ? 'excess' : sDiff < 0 ? 'shortage' : 'even');
+      } else {
+        sEl.textContent = '';
+        sEl.className = 'closing-seller-diff';
+      }
+    }
+    const sumEl = section.querySelector('.closing-seller-summary');
+    if (sumEl) {
+      if (anyFilled) {
+        const label = sDiff === 0 ? 'Balanced' : sDiff > 0 ? 'Excess' : 'Shortage';
+        sumEl.innerHTML = `<span>Expected ${formatCurrency(sExpected)}</span><span>Counted ${formatCurrency(counted)}</span><span class="${sDiff > 0 ? 'excess' : sDiff < 0 ? 'shortage' : ''}">${label} ${formatCurrency(Math.abs(sDiff))}</span>`;
+      } else {
+        sumEl.innerHTML = '';
+      }
+    }
+  });
+  const countedEl = document.getElementById('closing-counted');
+  const expectedEl = document.getElementById('closing-expected');
+  const diffEl = document.getElementById('closing-diff');
+  const diffLabel = document.getElementById('closing-diff-label');
+  const diffRow = document.getElementById('closing-diff-row');
+  if (expectedEl) expectedEl.textContent = formatCurrency(total);
+  if (countedEl) countedEl.textContent = formatCurrency(countedTotal);
+  const diff = countedTotal - total;
   if (diffEl && diffLabel && diffRow) {
     diffEl.textContent = diff === 0 ? formatCurrency(0) : (diff > 0 ? '+' : '-') + formatCurrency(Math.abs(diff));
     if (diff > 0) {
@@ -7155,18 +7284,42 @@ function closeClosingModal() {
 }
 
 function saveClosing() {
-  const { sales, byMethod, subtotal, tax, total } = getClosingTotals();
-  const counts = {};
-  let countTotal = 0;
-  document.querySelectorAll('#closing-methods .closing-count').forEach((input) => {
-    const value = Number(input.value || 0);
-    counts[input.dataset.method] = Number.isFinite(value) ? value : 0;
-    countTotal += Number.isFinite(value) ? value : 0;
-  });
+  const { sales, byMethod, subtotal, tax, total, sellers } = getClosingTotals();
   if (sales === 0) {
-    document.getElementById('closing-error').textContent = 'No transactions today to close.';
+    document.getElementById('closing-error').textContent = 'No transactions to reconcile yet.';
     return;
   }
+  const counts = {};
+  let countTotal = 0;
+  const sellerRecords = (sellers || []).map((seller, i) => {
+    const section = document.querySelector('#closing-methods .closing-seller[data-seller-i="' + i + '"]');
+    const sCounts = {};
+    let sCountTotal = 0;
+    if (section) {
+      section.querySelectorAll('.closing-count').forEach((input) => {
+        const value = Number(input.value || 0);
+        const safe = Number.isFinite(value) ? value : 0;
+        sCounts[input.dataset.method] = safe;
+        sCountTotal += safe;
+      });
+    }
+    Object.entries(sCounts).forEach(([method, amount]) => {
+      counts[method] = (counts[method] || 0) + amount;
+    });
+    countTotal += sCountTotal;
+    return {
+      name: seller.name,
+      system: seller.system,
+      cashier: seller.cashier,
+      sales: seller.sales,
+      subtotal: seller.subtotal,
+      tax: seller.tax,
+      total: seller.total,
+      counts: sCounts,
+      countTotal: sCountTotal,
+      difference: sCountTotal - seller.total
+    };
+  });
   const difference = countTotal - total;
   const closings = getFromStorage(STORAGE_KEYS.closings);
   closings.push({
@@ -7180,13 +7333,14 @@ function saveClosing() {
     counts,
     countTotal,
     difference,
+    sellers: sellerRecords,
     closedBy: currentUser ? currentUser.name : 'System'
   });
   writeToStorage(STORAGE_KEYS.closings, closings);
   document.getElementById('closing-modal').classList.add('hidden');
   renderClosingsList();
-  showToast(difference === 0 ? 'Day closed perfectly.' : `Day closed. Difference ${formatCurrency(difference)}`, difference === 0 ? 'success' : 'info');
-  logAudit('Day closed', `${sales} sale(s) · total ${formatCurrency(total)} · variance ${formatCurrency(difference)}`);
+  showToast(difference === 0 ? 'Reconciliation saved. Drawer balanced.' : `Reconciliation saved. Difference ${formatCurrency(difference)}`, difference === 0 ? 'success' : 'info');
+  logAudit('Reconciliation saved', `${sales} sale(s) · total ${formatCurrency(total)} · variance ${formatCurrency(difference)}`);
 }
 
 function renderClosingsList() {
