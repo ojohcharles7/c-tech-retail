@@ -1430,6 +1430,10 @@
               <h2>Full Package features</h2>
               <p class="panel-sub">Activate and configure extra features. Protected by the owner password.</p>
             </div>
+            <button class="fp-logout-btn" onclick="lockFullPackage()" title="Lock Full Package and require the owner password again">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/><path d="M12 15v2"/></svg>
+              Logout
+            </button>
           </div>
 
           <div class="settings-layout">
@@ -1657,6 +1661,18 @@
       </div>
     </div>
 
+    <div id="table-detail-modal" class="modal hidden">
+      <div class="modal-card table-detail-card">
+        <div class="modal-head">
+          <h3 id="table-detail-title">Table order</h3>
+          <button class="close-btn" onclick="closeTableDetailModal()">×</button>
+        </div>
+        <div class="modal-body">
+          <div id="table-detail-content"></div>
+        </div>
+      </div>
+    </div>
+
     <div id="invoices-modal" class="modal hidden">
       <div class="modal-card invoices-card">
         <div class="modal-head">
@@ -1728,6 +1744,16 @@
           <div class="pay-summary">
             <span>Amount due</span>
             <strong id="payment-amount">₦0</strong>
+          </div>
+
+          <div id="rounding-section" class="rounding-section hidden">
+            <label class="pay-method-label">Round total up</label>
+            <label class="rounding-toggle">
+              <input type="checkbox" id="rounding-toggle" onchange="setCartRounding()" />
+              <span class="rounding-switch"></span>
+              <span>Nearest ₦10</span>
+            </label>
+            <p class="form-hint" id="rounding-hint"></p>
           </div>
 
           <label class="pay-method-label">Payment method</label>
@@ -2302,6 +2328,6 @@
       </div>
     </div>
 
-    <script src="pos.js?v=20260923s"></script>
+    <script src="pos.js?v=20260924j"></script>
   </body>
 </html>

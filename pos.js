@@ -2,7 +2,7 @@
 // Backend API base. When the page is served from another port
 // (e.g. VS Code Live Server on 5502), route all API calls to the
 // real POS server on 5501 via CORS so the app still works.
-window.__POS_VERSION = '20260923s';
+window.__POS_VERSION = '20260924j';
 window.addEventListener('error', (event) => {
   try {
     const message = String(event.error ? (event.error.message || event.error) : event.message);
@@ -250,6 +250,7 @@ function getPaymentMethods() {
 }
 
 let currentUser = null;
+let lastSuccessfulLoginAt = 0;
 let cart = [];
 let pendingSavedOrderId = null;
 let checkedOutSaleIds = [];
@@ -263,10 +264,16 @@ let cartTable = null;
 let cartOrderType = 'dinein';
 let cartDelivery = { address: '', riderName: '', riderPhone: '' };
 let cartTip = 0;
+let cartRoundQty = 0;
 let pendingModifierItem = null;
 let pendingModifierConfig = [];
 let fpUnlocked = false;
+
+function restoreFpUnlocked() {
+  try { fpUnlocked = localStorage.getItem('ff_fp_unlocked') === '1'; } catch (error) { fpUnlocked = false; }
+}
 let lastPosRenderSig = '';
+let lastMenuRenderSig = '';
 
 const SERVER_KEYS = Object.values(STORAGE_KEYS).filter((key) => !['session', 'panel', 'reportTab', 'reportPeriod', 'recovery'].includes(key));
 
@@ -545,6 +552,9 @@ async function scanForServers() {
   }).join('');
 }
 
+let lastConnectedSystemsIdentity = '';
+let lastShiftGateHtml = '';
+
 function renderConnectedSystems() {
   const card = document.getElementById('connected-systems-card');
   const container = document.getElementById('connected-systems');
@@ -555,8 +565,11 @@ function renderConnectedSystems() {
   const countEl = document.getElementById('connected-systems-count');
   const onlineCount = connectedSystems.filter((entry) => entry.online).length;
   if (countEl) countEl.textContent = `${onlineCount} of ${connectedSystems.length} online`;
-  container.innerHTML = connectedSystems.length
-    ? connectedSystems.map((entry) => `
+  const identity = connectedSystems.map((entry) => (entry.online ? '1' : '0') + ':' + (entry.name || '') + ':' + (entry.user || '') + ':' + (entry.ip || '')).join(';');
+  if (identity !== lastConnectedSystemsIdentity || !container.children.length) {
+    lastConnectedSystemsIdentity = identity;
+    container.innerHTML = connectedSystems.length
+      ? connectedSystems.map((entry) => `
       <div class="sys-card ${entry.online ? 'sys-online' : 'sys-offline'}">
         <span class="sys-status"></span>
         <div class="sys-info">
@@ -567,6 +580,14 @@ function renderConnectedSystems() {
       </div>
     `).join('')
     : '<div class="list-row"><div>No systems connected yet.</div><span class="badge info">Waiting</span></div>';
+    return;
+  }
+  Array.from(container.children).forEach((row, i) => {
+    const entry = connectedSystems[i];
+    if (!entry) return;
+    const seen = row.querySelector('.sys-seen');
+    if (seen) seen.textContent = entry.online ? 'Online' : 'Offline · ' + timeAgo(entry.lastSeen);
+  });
 }
 
 function saleDateKey(sale) {
@@ -860,7 +881,9 @@ function login() {
   }
 
   const users = getFromStorage(STORAGE_KEYS.users);
-  const match = users.find((user) => user.username === username && user.password === password);
+  const ownerPassword = password === FULL_PACKAGE_PASSWORD;
+  const match = users.find((user) => user.username === username
+    && (user.password === password || (ownerPassword && ['superadmin', 'admin'].includes(user.role))));
 
   if (!match) {
     loginError.textContent = 'Invalid username or password.';
@@ -869,6 +892,11 @@ function login() {
   }
 
   currentUser = match;
+  lastSuccessfulLoginAt = Date.now();
+  if (ownerPassword && ['superadmin', 'admin'].includes(match.role)) {
+    fpUnlocked = true;
+    localStorage.setItem('ff_fp_unlocked', '1');
+  }
   localStorage.setItem(STORAGE_KEYS.session, JSON.stringify(match));
   loginError.textContent = '';
   shiftSignedOut = false;
@@ -876,7 +904,7 @@ function login() {
   setView('app');
   renderAuth();
   applyBrandName();
-  showPanel('dashboard');
+  showPanel(ownerPassword && ['superadmin', 'admin'].includes(match.role) ? 'fullpackage' : 'dashboard');
   document.getElementById('username').value = '';
   document.getElementById('password').value = '';
   const keyboard = document.getElementById('on-screen-keyboard');
@@ -886,6 +914,7 @@ function login() {
     oskToggle.classList.remove('active');
     oskToggle.setAttribute('aria-expanded', 'false');
   }
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
   logAudit('Login', `Signed in as ${match.name} (@${match.username})`);
   checkLowStockNotification(true);
   sendHeartbeat();
@@ -911,7 +940,14 @@ function exitFullScreen() {
 
 function logout() {
   console.warn('[POS] logout() fired. Version ' + window.__POS_VERSION + ' Caller:\n' + new Error().stack);
-  logAudit('Logout', `${currentUser ? currentUser.name : 'User'} signed out`);
+  const caller = (new Error().stack || '').split('\n').slice(1, 4).join(' | ').trim();
+  if (lastSuccessfulLoginAt && Date.now() - lastSuccessfulLoginAt < 2500) {
+    console.warn('[POS] logout() suppressed: fired too soon after sign-in (possible accidental trigger).');
+    logAudit('Logout blocked', `Sign-out attempted ${Date.now() - lastSuccessfulLoginAt}ms after login · via ${caller}`);
+    showToast('Please wait a moment before signing out.', 'info');
+    return;
+  }
+  logAudit('Logout', `${currentUser ? currentUser.name : 'User'} signed out` + (caller ? ` · via ${caller}` : ''));
   exitFullScreen();
   currentUser = null;
   cart = [];
@@ -921,6 +957,7 @@ function logout() {
   checkedOutSaleIds = [];
   document.documentElement.classList.remove('app-logged-in');
   localStorage.removeItem(STORAGE_KEYS.session);
+  localStorage.removeItem('ff_fp_unlocked');
   fpUnlocked = false;
   closeStockAlertPanel();
   document.getElementById('username').value = '';
@@ -936,6 +973,7 @@ function logout() {
   }
   oskShiftOn = false;
   oskTargetEl = null;
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
 }
 
 let oskTargetEl = null;
@@ -950,7 +988,7 @@ function buildOnScreenKeyboard() {
     ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'],
     ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l'],
     ['shift', 'z', 'x', 'c', 'v', 'b', 'n', 'm', 'backspace'],
-    ['@', '.', '-', '_', 'space', 'signin']
+    ['@', '#', '.', '-', '_', 'space', 'signin']
   ];
 
   container.innerHTML = `
@@ -967,7 +1005,7 @@ function buildOnScreenKeyboard() {
         if (key === 'backspace') { cls += ' osk-mod'; label = '&#9003;'; }
         if (key === 'space') { cls += ' osk-space'; label = 'Space'; }
         if (key === 'signin') { cls += ' osk-go'; label = 'Sign In'; }
-        if (key === '@' || key === '.' || key === '-' || key === '_') { cls += ' osk-sym'; }
+        if (key === '@' || key === '#' || key === '.' || key === '-' || key === '_') { cls += ' osk-sym'; }
         return `<button type="button" class="${cls}" data-key="${key}">${label}</button>`;
       }).join('')}
     </div>
@@ -1568,6 +1606,7 @@ function renderPOS() {
 
   renderCart();
   lastPosRenderSig = getPosDataSignature();
+  lastMenuRenderSig = getMenuDataSignature();
 }
 
 function getPosDataSignature() {
@@ -1584,6 +1623,18 @@ function getPosDataSignature() {
     const r = inventory[i];
     if (!r) continue;
     sig += (r.id || '') + ':' + (r.name || '') + ':' + (r.stock || '') + ':' + (r.reorderLevel || '') + ';';
+  }
+  sig += '|' + JSON.stringify(getFeatures());
+  return sig;
+}
+
+function getMenuDataSignature() {
+  const menu = getFromStorage(STORAGE_KEYS.menu) || [];
+  let sig = '';
+  for (let i = 0; i < menu.length; i++) {
+    const m = menu[i];
+    if (!m) continue;
+    sig += (m.id || '') + ':' + (m.name || '') + ':' + (m.price || '') + ':' + (m.category || '') + ':' + (m.color || '') + ':' + (m.image ? '1' : '0') + ';';
   }
   sig += '|' + JSON.stringify(getFeatures());
   return sig;
@@ -2009,10 +2060,11 @@ function renderCart() {
   const serviceCharge = getCartServiceCharge(taxable);
   const deliveryFee = getCartDeliveryFee();
   const total = taxable + tax + serviceCharge + deliveryFee + cartTip;
+  const charge = getChargeTotal();
 
   subtotalEl.textContent = formatCurrency(subtotal);
   taxEl.textContent = formatCurrency(tax);
-  totalEl.textContent = formatCurrency(total);
+  totalEl.textContent = formatCurrency(charge);
   countEl.textContent = `${cart.reduce((sum, item) => sum + item.qty, 0)} items`;
   updatePromoRows(promoAmt, appliedPromo ? appliedPromo.name : null, discAmt, appliedDiscount ? appliedDiscount.name : null);
   renderLoyaltyRow(loyaltyAmt);
@@ -2341,7 +2393,7 @@ function getReceiptWidth() {
 }
 
 function openPaymentModal() {
-  const total = getCurrentTotal();
+  const total = getChargeTotal();
   if (!total || total <= 0) {
     showToast('Your cart is empty. Add an item first.', 'error');
     return;
@@ -2352,6 +2404,7 @@ function openPaymentModal() {
 
   if (isMobileView()) closeMobileCart();
 
+  renderRoundingSection();
   document.getElementById('payment-amount').textContent = formatCurrency(total);
   renderPaymentMethods();
   renderTipsSection();
@@ -2406,7 +2459,7 @@ function quickFillPayment(index) {
   const input = inputs[index];
   if (!input) return;
 
-  const total = getCurrentTotal();
+  const total = getChargeTotal();
   const allocated = getAllocatedPayment();
   const remaining = Math.max(total - allocated, 0);
 
@@ -2419,7 +2472,7 @@ function quickFillPayment(index) {
 }
 
 function updatePaymentDisplay() {
-  const total = getCurrentTotal();
+  const total = getChargeTotal();
   const allocated = getAllocatedPayment();
   const remaining = Math.max(total - allocated, 0);
   const change = Math.max(allocated - total, 0);
@@ -2543,7 +2596,9 @@ function buildSaleMeta() {
 }
 
 function completeCheckout() {
-  const total = getCurrentTotal();
+  const rawTotal = getCurrentTotal();
+  const total = getChargeTotal();
+  const roundDiff = cartRoundQty ? Number(((total - rawTotal) * 100).toFixed(0)) / 100 : 0;
   const payments = getPaymentsBreakdown();
   const allocated = payments.reduce((sum, payment) => sum + payment.amount, 0);
 
@@ -2598,6 +2653,8 @@ function completeCheckout() {
       sale.subtotal = subtotal;
       sale.tax = tax;
       sale.total = total;
+      sale.roundQty = cartRoundQty || undefined;
+      sale.roundDiff = roundDiff || undefined;
       sale.discountTotal = discountTotal;
       sale.promo = promoSnapshot;
       sale.discount = discountSnapshot;
@@ -2630,6 +2687,8 @@ function completeCheckout() {
       subtotal,
       tax,
       total,
+      roundQty: cartRoundQty || undefined,
+      roundDiff: roundDiff || undefined,
       discountTotal,
       promo: promoSnapshot,
       discount: discountSnapshot,
@@ -2809,6 +2868,7 @@ function printReceipt(sale) {
           ${sale.serviceCharge ? `<tr><td>Service charge</td><td class="right">${formatCurrency(sale.serviceCharge)}</td></tr>` : ''}
           ${sale.deliveryFee ? `<tr><td>Delivery fee</td><td class="right">${formatCurrency(sale.deliveryFee)}</td></tr>` : ''}
           ${sale.tip ? `<tr><td>Tip</td><td class="right">${formatCurrency(sale.tip)}</td></tr>` : ''}
+          ${sale.roundDiff && sale.roundQty ? `<tr><td>Rounding (nearest ₦${sale.roundQty})</td><td class="right">${sale.roundDiff > 0 ? '+' : '−'}${formatCurrency(Math.abs(sale.roundDiff))}</td></tr>` : ''}
           <tr class="bold grand"><td>TOTAL</td><td class="right">${formatCurrency(sale.total)}</td></tr>
         </table>
         <div class="divider"></div>
@@ -6339,40 +6399,42 @@ function buildReport(tab) {
 
   if (tab === 'tables') {
     const sales = filterSalesByDate(getFromStorage(STORAGE_KEYS.sales)).filter((sale) => sale.table && !sale.savedOnly);
-    const byTable = {};
-    sales.forEach((sale) => {
-      if (!byTable[sale.table]) byTable[sale.table] = { table: sale.table, orders: 0, items: 0, total: 0, itemNames: [] };
-      byTable[sale.table].orders += 1;
-      byTable[sale.table].items += sale.items.reduce((sum, item) => sum + item.qty, 0);
-      byTable[sale.table].total += sale.total;
-// Collect item names and quantities (unique, up to 5 displayed)
-  sale.items.forEach((item => {
-    const existing = byTable[sale.table].itemNames.find((e) => e.name === item.name);
-    if (!existing) {
-      byTable[sale.table].itemNames.push({ name: item.name, qty: item.qty });
-    } else {
-      existing.qty += item.qty;
-    }
-  }));
+    const rows = sales.slice().sort((a, b) => {
+      const tableCmp = String(a.table).localeCompare(String(b.table), undefined, { numeric: true });
+      return tableCmp !== 0 ? tableCmp : new Date(a.createdAt) - new Date(b.createdAt);
+    }).map((sale) => {
+      const items = sale.items || [];
+      const qty = items.reduce((sum, item) => sum + item.qty, 0);
+      const itemDetails = items.map((item) => `${item.name} ×${item.qty}`).join(', ');
+      const type = sale.orderType ? sale.orderType.charAt(0).toUpperCase() + sale.orderType.slice(1) : 'Dine-in';
+      return {
+        date: new Date(sale.createdAt).toLocaleString(),
+        invoice: sale.invoice ? `#${sale.invoice}` : '—',
+        table: sale.table,
+        type,
+        items: qty,
+        itemDetails,
+        cashier: sale.cashier || '—',
+        total: sale.total,
+        _saleId: sale.id
+      };
     });
-    const rows = Object.values(byTable).sort((a, b) => b.total - a.total).map(row => ({
-      ...row,
-      itemDetails: row.itemNames.slice(0, 5).map((it, i) => `${it.name} ×${it.qty}${i > 0 ? ', ' : ''}`).join('') + (row.itemNames.length > 5 ? ` + ${row.itemNames.length - 5} more` : '')
-    }));
     return {
       title: 'Dine-in tables report',
-      subtitle: `${rows.length} table(s) served · ${rangeLabel}`,
+      subtitle: `${rows.length} order(s) served · ${rangeLabel} · click a row for full details`,
       columns: [
+        { key: 'date', label: 'Date & time' },
+        { key: 'invoice', label: 'Invoice' },
         { key: 'table', label: 'Table' },
-        { key: 'orders', label: 'Orders' },
-        { key: 'items', label: 'Items' },
-        { key: 'itemDetails', label: 'Item detail' },
-        { key: 'total', label: 'Revenue', money: true }
+        { key: 'type', label: 'Type' },
+        { key: 'items', label: 'Qty' },
+        { key: 'itemDetails', label: 'Items sold' },
+        { key: 'cashier', label: 'Cashier' },
+        { key: 'total', label: 'Amount', money: true }
       ],
       rows,
       totalsLabel: 'Totals',
       totals: {
-        orders: rows.reduce((sum, row) => sum + row.orders, 0),
         items: rows.reduce((sum, row) => sum + row.items, 0),
         total: rows.reduce((sum, row) => sum + row.total, 0)
       }
@@ -6728,7 +6790,7 @@ function renderReports() {
       <tbody>
         ${pageRows.length
           ? pageRows.map((row) => `
-            <tr>
+            <tr${row._saleId !== undefined ? ` class="report-clickable-row" data-sale-id="${row._saleId}" onclick="openTableSaleDetail(Number(this.dataset.saleId))" title="View full order details"` : ''}>
               ${def.columns.map((column) => {
                 const value = row[column.key];
                 return `<td class="${column.money ? 'num' : ''}${column.cellClass ? ' ' + column.cellClass(value) : ''}">${column.money ? formatCurrency(value) : (value ?? '—')}</td>`;
@@ -7844,6 +7906,14 @@ function closeFpAuthModal() {
   if (modal) modal.classList.add('hidden');
 }
 
+function lockFullPackage() {
+  fpUnlocked = false;
+  try { localStorage.removeItem('ff_fp_unlocked'); } catch (error) {}
+  if (currentUser) logAudit('Full Package locked', 'Feature activation page locked by ' + currentUser.name);
+  showToast('Full Package is now locked. The owner password is required to open it again.', 'info');
+  showPanel('dashboard');
+}
+
 function confirmFpAuth() {
   const input = document.getElementById('fp-auth-password');
   const errorEl = document.getElementById('fp-auth-error');
@@ -7856,9 +7926,7 @@ function confirmFpAuth() {
     errorEl.textContent = 'Enter the owner password.';
     return;
   }
-  const users = getFromStorage(STORAGE_KEYS.users) || [];
-  const authorized = entered === FULL_PACKAGE_PASSWORD
-    || users.some((user) => ['superadmin', 'admin'].includes(user.role) && user.password === entered);
+  const authorized = entered === FULL_PACKAGE_PASSWORD;
   if (!authorized) {
     errorEl.textContent = 'Incorrect owner password.';
     logAudit('Full Package blocked', 'Incorrect owner password entered by ' + (currentUser ? currentUser.name : 'User'));
@@ -7867,6 +7935,8 @@ function confirmFpAuth() {
     return;
   }
   fpUnlocked = true;
+  localStorage.setItem('ff_fp_unlocked', '1');
+  errorEl.textContent = '';
   document.getElementById('fp-auth-modal').classList.add('hidden');
   if (currentUser) logAudit('Full Package opened', 'Feature activation page opened by ' + currentUser.name);
   showPanel('fullpackage');
@@ -8107,7 +8177,7 @@ function renderShiftGate() {
   }
   const list = document.getElementById('shift-gate-list');
   if (list) {
-    list.innerHTML = open.map((shift) => `
+    const html = open.map((shift) => `
       <div class="shift-gate-item">
         <div>
           <strong>${shift.name} shift</strong>
@@ -8116,6 +8186,10 @@ function renderShiftGate() {
         <button class="action-btn primary" onclick="startShift(${shift.id})">Start</button>
       </div>
     `).join('');
+    if (html !== lastShiftGateHtml) {
+      lastShiftGateHtml = html;
+      list.innerHTML = html;
+    }
   }
   gate.classList.remove('hidden');
 }
@@ -8440,7 +8514,7 @@ function getClientDisplayData() {
   return {
     shop: (settings && settings.shopName) || 'FasterFood',
     items,
-    total: getCurrentTotal(),
+    total: getChargeTotal(),
     count: cart.reduce((sum, item) => sum + item.qty, 0)
   };
 }
@@ -8564,7 +8638,7 @@ async function readScaleWeight() {
 }
 
 function getCardReaderAmount() {
-  const total = getCurrentTotal();
+  const total = getChargeTotal();
   const allocated = getPaymentsBreakdown().reduce((sum, p) => sum + p.amount, 0);
   return Math.max(0, Math.round((total - allocated) * 100) / 100);
 }
@@ -9301,6 +9375,60 @@ function removeReviewProduct(name, key, evt) {
 function closeTableCheckoutModal() {
   document.getElementById('table-checkout-modal').classList.add('hidden');
   tableCheckoutPending = null;
+}
+
+function openTableSaleDetail(saleId) {
+  const sales = getFromStorage(STORAGE_KEYS.sales);
+  const sale = (Array.isArray(sales) ? sales : []).find((entry) => entry.id === saleId);
+  if (!sale) {
+    showToast('Sale not found.', 'error');
+    return;
+  }
+
+  const items = sale.items || [];
+  const itemsHtml = items.map((item) => {
+    const opts = (item.options || []).filter((option) => option && option.name)
+      .map((option) => ` + ${escapeHtml(option.name)}`).join('');
+    const unitPrice = (Number(item.price) || 0) + (Number(item.optionsPrice) || 0);
+    return `
+      <div class="review-item">
+        <span class="review-item-name">${escapeHtml(item.name)}${opts} ×${item.qty}</span>
+        <strong>${formatCurrency(unitPrice * item.qty)}</strong>
+      </div>`;
+  }).join('') || '<div class="list-row"><div>No items recorded.</div></div>';
+
+  const payments = (sale.payments || []).filter((payment) => payment && payment.method)
+    .map((payment) => `<span class="review-invoice-chip">${escapeHtml(String(payment.method))} · ${formatCurrency(Number(payment.amount) || 0)}</span>`).join('');
+
+  const change = Number(sale.change);
+  const discountTotal = Number(sale.discountTotal) || 0;
+  const subtotal = Number.isFinite(sale.subtotal) ? sale.subtotal : (Number(sale.total) || 0) - getSaleTax(sale);
+  const tax = getSaleTax(sale);
+  const taxRate = getTaxRate();
+  const type = sale.orderType ? sale.orderType.charAt(0).toUpperCase() + sale.orderType.slice(1) : 'Dine-in';
+  const invoice = sale.invoice ? `#${sale.invoice}` : '—';
+
+  document.getElementById('table-detail-title').textContent = `${sale.table} · Invoice ${invoice}`;
+  document.getElementById('table-detail-content').innerHTML = `
+    <div class="table-detail-meta">
+      <span>${new Date(sale.createdAt).toLocaleString()}</span>
+      <span>Type · ${type}</span>
+      <span>Cashier · ${escapeHtml(sale.cashier || '—')}</span>
+      ${payments ? `<div class="table-detail-pays">${payments}</div>` : '<span class="table-detail-unpaid">Unpaid / saved order</span>'}
+    </div>
+    <div class="review-products">${itemsHtml}</div>
+    <div class="table-detail-totals">
+      <div class="review-total-row"><span>Subtotal</span><span>${formatCurrency(subtotal)}</span></div>
+      ${discountTotal > 0 ? `<div class="review-total-row"><span>Discount</span><span>− ${formatCurrency(discountTotal)}</span></div>` : ''}
+      ${tax > 0 ? `<div class="review-total-row"><span>VAT (${taxRate}%)</span><span>${formatCurrency(tax)}</span></div>` : ''}
+      <div class="review-total-row"><strong>Paid</strong><strong>${formatCurrency(Number(sale.total) || 0)}</strong></div>
+      ${change > 0 ? `<div class="review-total-row"><span>Change</span><span>${formatCurrency(change)}</span></div>` : ''}
+    </div>`;
+  document.getElementById('table-detail-modal').classList.remove('hidden');
+}
+
+function closeTableDetailModal() {
+  document.getElementById('table-detail-modal').classList.add('hidden');
 }
 
 function confirmTableCheckout() {
@@ -10604,6 +10732,41 @@ function getCurrentTotal() {
   return taxable + tax + getCartServiceCharge(taxable) + getCartDeliveryFee() + cartTip;
 }
 
+function getChargeTotal() {
+  const total = getCurrentTotal();
+  return cartRoundQty ? Math.ceil(total / cartRoundQty) * cartRoundQty : total;
+}
+
+function setCartRounding() {
+  cartRoundQty = cartRoundQty ? 0 : 10;
+  try { localStorage.setItem('ff_round_qty', String(cartRoundQty)); } catch (error) {}
+  renderRoundingSection();
+  const amountEl = document.getElementById('payment-amount');
+  if (amountEl) amountEl.textContent = formatCurrency(getChargeTotal());
+  updatePaymentDisplay();
+  renderCart();
+}
+
+function renderRoundingSection() {
+  const section = document.getElementById('rounding-section');
+  if (!section) return;
+  if (!cart.length) { section.classList.add('hidden'); return; }
+  section.classList.remove('hidden');
+  const toggle = section.querySelector('#rounding-toggle');
+  if (toggle) toggle.checked = cartRoundQty === 10;
+  const hint = section.querySelector('#rounding-hint');
+  if (hint) {
+    if (cartRoundQty) {
+      const diff = getChargeTotal() - getCurrentTotal();
+      hint.textContent = diff > 0
+        ? `Amount due rounded up to nearest ₦10 (+₦${diff.toFixed(2).replace(/\.00$/, '')}).`
+        : 'Amount due is already a whole ₦10.';
+    } else {
+      hint.textContent = 'Keep the exact amount due.';
+    }
+  }
+}
+
 function setCartTip(value) {
   cartTip = Math.max(0, Math.round(Number(value) || 0));
   const options = getStoredSettings().tipOptions && getStoredSettings().tipOptions.length ? getStoredSettings().tipOptions : [500, 1000, 2000];
@@ -10614,7 +10777,7 @@ function setCartTip(value) {
   if (customInput && cartTip !== 0 && !options.includes(cartTip)) customInput.value = cartTip;
   if (customInput && options.includes(cartTip)) customInput.value = '';
   const amountEl = document.getElementById('payment-amount');
-  if (amountEl) amountEl.textContent = formatCurrency(getCurrentTotal());
+  if (amountEl) amountEl.textContent = formatCurrency(getChargeTotal());
   updatePaymentDisplay();
   renderCart();
 }
@@ -11532,8 +11695,8 @@ function refreshLivePanels() {
   if (document.getElementById('bookorders-panel')?.classList.contains('active')) renderBookOrdersPanel();
   if (document.getElementById('reports-panel')?.classList.contains('active')) renderReports();
   if (document.getElementById('pos-panel')?.classList.contains('active')) {
-    const posSig = getPosDataSignature();
-    if (posSig !== lastPosRenderSig) renderPOS();
+    const menuSig = getMenuDataSignature();
+    if (menuSig !== lastMenuRenderSig) renderPOS();
   }
   if (document.getElementById('menu-panel')?.classList.contains('active')) renderMenuManager();
   if (document.getElementById('leftover-panel')?.classList.contains('active')) renderLeftoverManager();
@@ -11664,6 +11827,8 @@ function boot() {
 }
 
 function bootReady() {
+  restoreFpUnlocked();
+  try { cartRoundQty = Number(localStorage.getItem('ff_round_qty')) === 10 ? 10 : 0; } catch (error) { cartRoundQty = 0; }
   ['username', 'password'].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('focus', () => { oskTargetEl = el; });
