@@ -30,14 +30,56 @@ PostgreSQL must be running. It is a Windows service
 
 ### First-time host setup
 
-Run once as Administrator:
+Run once, right-click → **Run as administrator**:
 
 ```
 setup-admin.cmd
 ```
 
-This restarts PostgreSQL (applying `listen_addresses = 'localhost'`) and opens
-TCP 5501 in Windows Firewall on all profiles.
+It does four things and then starts the server:
+
+1. Verifies `node.exe` exists (edit the `FF_NODE` line at the top of the
+   script if Node is not on the default path)
+2. Confirms the `postgresql-x64-18` service is running, starting it if not
+3. Opens TCP 5501 in Windows Firewall on all profiles
+4. Registers a **boot-start scheduled task** called `FasterFoodPOS` that runs
+   the server as `SYSTEM`, then starts it and waits for port 5501 to answer
+
+After this you never start the server by hand again — it comes up with the PC,
+before anyone logs in.
+
+The script does **not** edit `postgresql.conf`. `listen_addresses` is already
+`'localhost'`, which is what keeps 5432 off the network. Confirm with:
+
+```
+netstat -ano | findstr :5432
+```
+
+You should see `127.0.0.1` and `[::1]` only, never `0.0.0.0`.
+
+Re-running the script is safe: the firewall rule and the task are both
+replaced rather than duplicated.
+
+## Fixed IP
+
+Terminals need a URL that never changes. Do **not** add an extra static IP to
+the adapter — reserve the existing address in your router instead. It is the
+only approach that does not fight the DHCP server.
+
+1. Open the router admin page at `http://192.168.0.1`.
+2. Find **DHCP server → Address reservation / Static lease** (the wording
+   varies by brand).
+3. Reserve `192.168.0.3` against the host PC's MAC address.
+4. Check the DHCP **pool range** first. `192.168.0.3` is inside the default
+   range on most routers, so the reservation is what keeps the router from
+   handing your address to a different device later.
+5. Confirm the reservation took by running `ipconfig` — the address should be
+   unchanged after a router reboot.
+
+Terminals then bookmark `http://192.168.0.3:5501` and never touch it again.
+
+If the host is on Wi-Fi and you also want it to survive the router rebooting
+before Wi-Fi associates, prefer a **wired** connection for the host PC.
 
 ## Requirements
 
@@ -46,6 +88,15 @@ TCP 5501 in Windows Firewall on all profiles.
 - Terminals need nothing installed — just a browser
 - All terminals must reach the host on port 5501 (same Wi-Fi/router or
   Ethernet)
+- A DHCP reservation for the host address (see **Fixed IP**)
+
+> **Node must be reachable at boot.** This host runs a portable Node install
+> from `D:\webapp test run\node.exe` rather than `C:\Program Files\nodejs`.
+> That works, but `D:` has to be mounted and ready before the `FasterFoodPOS`
+> task fires at startup. If `D:` is a removable or secondary disk, move the
+> whole project to a folder on `C:` — a till that only boots when a disk is
+> attached is not worth the saving. Update the `FF_NODE` line in
+> `setup-admin.cmd` if you do.
 
 ## Database
 
@@ -163,7 +214,35 @@ archive.
 
 ## Production (keep the server running)
 
-Install [NSSM](https://nssm.cc/download), then run once as Administrator:
+### Scheduled task (default)
+
+Already handled by `setup-admin.cmd` — no extra software. The `FasterFoodPOS`
+task triggers **at startup**, runs as `SYSTEM`, has no execution time limit,
+and restarts up to 999 times at 1-minute intervals after a crash.
+
+To inspect or control it:
+
+```
+schtasks /query /tn "FasterFoodPOS" /v /fo list
+schtasks /run   /tn "FasterFoodPOS"
+schtasks /end   /tn "FasterFoodPOS"
+```
+
+The **Last Run Result** column in Task Scheduler is the place to look when the
+server does not come up after a reboot. `0x1` usually means the `node.exe`
+path is wrong or its drive was not ready yet.
+
+To re-register it after moving Node or the project, just run
+`setup-admin.cmd` again.
+
+> Do not also run `npm start` by hand while the task is running — port 5501 is
+> already in use and the second instance will fail to bind.
+
+### NSSM Windows service
+
+Install [NSSM](https://nssm.cc/download), then run once as Administrator. Use
+this if you want real service management (stdout/stderr files, `sc depend`).
+Skip it if the scheduled task is enough.
 
 ```
 nssm install FasterFoodPOS "C:\Program Files\nodejs\node.exe" "C:\path\to\MY-RETAIL\server.js"
@@ -179,6 +258,11 @@ nssm start FasterFoodPOS
 `sc depend` makes the POS wait for PostgreSQL at boot. The
 `AppExit Default Restart` line restarts the server if it ever crashes.
 
+Note this needs a **Windows service** account to read the project folder. If
+your project sits under a user profile (`C:\Users\<you>\...`), either copy it
+to a non-profile path such as `C:\FasterFoodPOS` or grant the service account
+read access to that folder.
+
 ### Alternatives
 
 **pm2**
@@ -190,13 +274,15 @@ pm2 save
 pm2 startup
 ```
 
-**Task Scheduler at logon** — run `node server.js` with the working directory
-set to the project and "Restart on failure" enabled.
+**Task Scheduler at logon** — same as the default task but triggered on user
+logon instead of at startup. The server then stays down whenever nobody is
+logged in, which is rarely what you want for a till.
 
 ## Network setup on the host
 
-1. Give the host a **static IP** (or a DHCP reservation in your router) so the
-   shared URL never changes.
+1. Give the host a **fixed address** so the shared URL never changes — see
+   [Fixed IP](#fixed-ip). A router DHCP reservation is the recommended way;
+   avoid stacking extra static IPs onto the adapter.
 2. **Windows Firewall** — `setup-admin.cmd` adds this. To do it by hand:
    ```
    netsh advfirewall firewall add rule name="FasterFood POS" dir=in action=allow protocol=TCP localport=5501 profile=any
@@ -247,6 +333,24 @@ curl http://localhost:5501/api/data
 > debounced file write.
 
 ## Troubleshooting
+
+**Server doesn't start after a reboot** — check the task:
+```
+schtasks /query /tn "FasterFoodPOS" /v /fo list
+```
+Read **Last Run Result**. `0x1` means the command could not be launched at all,
+almost always a wrong `node.exe` path or a drive that was not ready. Fix the
+`FF_NODE` line in `setup-admin.cmd` and re-run it. `0x41301` means "task is
+currently running", which is what you want to see.
+
+**Nothing is listening on 5501** — the task never started, or the project
+folder moved. Re-run `setup-admin.cmd`.
+
+**Port 5501 already in use** — you are running `npm start` while the
+`FasterFoodPOS` task is also running. Stop the manual one:
+```
+schtasks /end /tn "FasterFoodPOS"
+```
 
 **Terminals can't connect** — check the firewall rule, confirm the host IP
 hasn't changed, and try `http://<HOST-IP>:5501/api/info` from the terminal
