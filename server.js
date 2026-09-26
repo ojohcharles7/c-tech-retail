@@ -2,11 +2,12 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const crypto = require('crypto');
+const store = require('./db');
 
 const PORT = process.env.PORT || 5501;
 const HOST = '0.0.0.0';
 const ROOT = __dirname;
-const DB_FILE = path.join(ROOT, 'db.json');
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -23,8 +24,6 @@ const MIME = {
   '.woff2': 'font/woff2'
 };
 
-let db = {};
-let saveTimer = null;
 const sseClients = new Set();
 
 const systems = {};
@@ -107,27 +106,12 @@ setInterval(() => {
   }
 }, 5000);
 
-function loadDb() {
-  try {
-    const raw = fs.readFileSync(DB_FILE, 'utf8');
-    db = JSON.parse(raw);
-    if (!db || typeof db !== 'object' || Array.isArray(db)) db = {};
-  } catch (error) {
-    db = {};
-  }
+function dataSignature() {
+  return crypto.createHash('sha1').update(JSON.stringify(store.getVersions())).digest('hex');
 }
 
-function persistDb() {
-  if (saveTimer) clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => {
-    fs.writeFile(DB_FILE, JSON.stringify(db, null, 2), (err) => {
-      if (err) console.error('[db] save failed:', err.message);
-    });
-  }, 250);
-}
-
-function broadcast(key) {
-  const payload = `data: ${JSON.stringify({ key, value: db[key] })}\n\n`;
+function broadcast(key, version) {
+  const payload = `data: ${JSON.stringify({ key, value: store.getKey(key), v: version || 0 })}\n\n`;
   for (const res of sseClients) {
     try { res.write(payload); } catch (error) { sseClients.delete(res); }
   }
@@ -179,28 +163,55 @@ const server = http.createServer((req, res) => {
   }
 
   if (pathname === '/api/data' && req.method === 'GET') {
-    sendJson(res, 200, { data: db });
+    if (!store.isReady()) {
+      store.ensureLive();
+      sendJson(res, 503, { error: 'Database unavailable', ...store.status() });
+      return;
+    }
+    const data = store.getAll();
+    const signature = dataSignature();
+    res.writeHead(200, {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Cache-Control': 'no-store',
+      ETag: `"${signature}"`,
+      'X-Data-Version': signature
+    });
+    res.end(JSON.stringify({ data }));
     return;
   }
 
   const keyMatch = pathname.match(/^\/api\/data\/([^/]+)$/);
   if (keyMatch && req.method === 'GET') {
-    sendJson(res, 200, { key: keyMatch[1], value: db[keyMatch[1]] ?? null });
+    if (!store.isReady()) {
+      store.ensureLive();
+      sendJson(res, 503, { error: 'Database unavailable', ...store.status() });
+      return;
+    }
+    const key = keyMatch[1];
+    sendJson(res, 200, { key, value: store.getKey(key) });
     return;
   }
 
   if (keyMatch && req.method === 'PUT') {
     const key = keyMatch[1];
     readBody(req, (body) => {
+      let value;
       try {
-        const value = JSON.parse(body || 'null');
-        db[key] = value;
-        persistDb();
-        broadcast(key);
-        sendJson(res, 200, { ok: true });
+        value = JSON.parse(body || 'null');
       } catch (error) {
         sendJson(res, 400, { error: 'Invalid JSON body' });
+        return;
       }
+      store.putKey(key, value).then(
+        (version) => {
+          broadcast(key, version);
+          sendJson(res, 200, { ok: true, version });
+        },
+        (error) => {
+          console.error('[db] write failed for', key, '-', error.message);
+          sendJson(res, 503, { error: 'Database unavailable', detail: error.message });
+        }
+      );
     });
     return;
   }
@@ -269,19 +280,31 @@ function getNetworkAddresses() {
   return addresses;
 }
 
-loadDb();
-
-server.listen(PORT, HOST, () => {
-  console.log('FasterFood POS server running');
-  console.log(`  Local:   http://localhost:${PORT}`);
-  console.log('  Network:');
-  for (const addr of getNetworkAddresses()) {
-    console.log(`    http://${addr.address}:${PORT}  (${addr.name})`);
+async function start() {
+  try {
+    await store.init();
+  } catch (error) {
+    console.error('[db] initial connection failed:', error.message);
+    console.error('[db] API routes will return 503 until PostgreSQL is reachable.');
   }
-  console.log(`  Data:    ${DB_FILE}`);
-});
 
-process.on('SIGINT', () => {
-  persistDb();
-  setTimeout(() => process.exit(0), 300);
-});
+  server.listen(PORT, HOST, () => {
+    const status = store.status();
+    console.log('FasterFood POS server running');
+    console.log(`  Local:   http://localhost:${PORT}`);
+    console.log('  Network:');
+    for (const addr of getNetworkAddresses()) {
+      console.log(`    http://${addr.address}:${PORT}  (${addr.name})`);
+    }
+    console.log(`  Data:    postgresql://${store.config.host}:${store.config.port}/${store.config.database}  table app_data`);
+    console.log(`  Status:  ${status.ready ? 'connected' : 'OFFLINE (API returning 503)'}`);
+  });
+
+  process.on('SIGINT', async () => {
+    await store.flush().catch(() => {});
+    await store.close().catch(() => {});
+    process.exit(0);
+  });
+}
+
+start();

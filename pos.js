@@ -4848,6 +4848,35 @@ function getSaleTax(sale) {
   return rate > 0 ? sale.total * rate / (100 + rate) : 0;
 }
 
+function getSaleDiscount(sale) {
+  if (Number.isFinite(sale.discountTotal)) return sale.discountTotal;
+  const promo = sale.promo ? Number(sale.promo.amount) || 0 : 0;
+  const discount = sale.discount ? Number(sale.discount.amount) || 0 : 0;
+  const loyalty = sale.loyalty ? Number(sale.loyalty.amount) || 0 : 0;
+  return promo + discount + loyalty;
+}
+
+function getSaleGross(sale) {
+  if (Number.isFinite(sale.rawSubtotal)) return sale.rawSubtotal;
+  const net = Number.isFinite(sale.subtotal) ? sale.subtotal : sale.total - getSaleTax(sale);
+  return net + getSaleDiscount(sale);
+}
+
+function getSaleVoided(sale) {
+  if (!Array.isArray(sale.items)) return 0;
+  return sale.items.reduce((sum, item) => {
+    if (!item || !item.voided) return sum;
+    const line = (Number(item.price) || 0) * (Number(item.qty) || 0);
+    return sum + line + (Number(item.optionsPrice) || 0);
+  }, 0);
+}
+
+function getSaleRounding(sale) {
+  if (Number.isFinite(sale.roundDiff)) return sale.roundDiff;
+  const net = Number.isFinite(sale.subtotal) ? sale.subtotal : sale.total - getSaleTax(sale);
+  return sale.total - (net + getSaleTax(sale));
+}
+
 function getReportDateRange() {
   if (reportFrom && reportTo) {
     return {
@@ -4940,7 +4969,7 @@ const FEATURE_REPORT_TABS = {
   receipts: 'receipts'
 };
 
-const BASE_REPORT_TABS = ['sales', 'invoice', 'summary', 'totals', 'analysis', 'inventory', 'menu', 'orders', 'tax', 'payments', 'stock', 'products', 'daily', 'weekly', 'transactions', 'customers', 'refunds', 'purchases', 'grns', 'closings', 'price', 'shift', 'void', 'leftover', 'promos', 'bookorders', 'systems', 'profit', 'valuation', 'profitloss', 'suppliers'];
+const BASE_REPORT_TABS = ['sales', 'invoice', 'summary', 'totals', 'analysis', 'inventory', 'menu', 'orders', 'tax', 'payments', 'stock', 'products', 'daily', 'weekly', 'transactions', 'customers', 'refunds', 'purchases', 'grns', 'closings', 'xz', 'variance', 'price', 'shift', 'void', 'leftover', 'promos', 'bookorders', 'systems', 'profit', 'valuation', 'profitloss', 'suppliers'];
 
 function getActiveReportTabs() {
   const features = getFeatures();
@@ -6018,6 +6047,120 @@ function buildReport(tab) {
         closedBy: record.closedBy || '—'
       })),
       totals: { sales: totalSales, total: totalSum, countTotal: totalCounted, difference: totalDiff }
+    };
+  }
+
+  if (tab === 'xz') {
+    const sales = filterSalesByDate(getFromStorage(STORAGE_KEYS.sales));
+    const days = {};
+    sales.forEach((sale) => {
+      if (sale.savedOnly) return;
+      const created = new Date(sale.createdAt);
+      if (isNaN(created.getTime())) return;
+      const dayKey = `${created.getFullYear()}-${String(created.getMonth() + 1).padStart(2, '0')}-${String(created.getDate()).padStart(2, '0')}`;
+      if (!days[dayKey]) {
+        days[dayKey] = {
+          date: created.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }),
+          sales: 0, gross: 0, discount: 0, voided: 0, tax: 0, rounding: 0, net: 0, total: 0, refunds: 0
+        };
+      }
+      const day = days[dayKey];
+      const net = Number.isFinite(sale.subtotal) ? sale.subtotal : sale.total - getSaleTax(sale);
+      day.sales += 1;
+      day.gross += getSaleGross(sale);
+      day.discount += getSaleDiscount(sale);
+      day.voided += getSaleVoided(sale);
+      day.tax += getSaleTax(sale);
+      day.rounding += getSaleRounding(sale);
+      day.net += net;
+      day.total += sale.total;
+      if (sale.refunded) day.refunds += sale.total;
+    });
+
+    const rows = Object.entries(days).sort((a, b) => a[0].localeCompare(b[0])).map(([, data]) => data);
+
+    return {
+      title: 'X-Z report (end of day)',
+      subtitle: `${rows.length} trading day(s) · ${rangeLabel}`,
+      columns: [
+        { key: 'date', label: 'Trading day' },
+        { key: 'sales', label: 'Transactions' },
+        { key: 'gross', label: 'Gross sales', money: true },
+        { key: 'discount', label: 'Discounts', money: true },
+        { key: 'voided', label: 'Voided', money: true, cellClass: (v) => (Number(v) || 0) > 0 ? 'diff-shortage' : '' },
+        { key: 'net', label: 'Net sales', money: true },
+        { key: 'tax', label: 'VAT / TAX', money: true },
+        { key: 'rounding', label: 'Rounding', money: true },
+        { key: 'total', label: 'Total taken', money: true },
+        { key: 'refunds', label: 'Refunded', money: true, cellClass: (v) => (Number(v) || 0) > 0 ? 'diff-shortage' : '' }
+      ],
+      rows,
+      totalsLabel: 'Z-Total',
+      totals: {
+        sales: rows.reduce((sum, row) => sum + row.sales, 0),
+        gross: rows.reduce((sum, row) => sum + row.gross, 0),
+        discount: rows.reduce((sum, row) => sum + row.discount, 0),
+        voided: rows.reduce((sum, row) => sum + row.voided, 0),
+        net: rows.reduce((sum, row) => sum + row.net, 0),
+        tax: rows.reduce((sum, row) => sum + row.tax, 0),
+        rounding: rows.reduce((sum, row) => sum + row.rounding, 0),
+        total: rows.reduce((sum, row) => sum + row.total, 0),
+        refunds: rows.reduce((sum, row) => sum + row.refunds, 0)
+      }
+    };
+  }
+
+  if (tab === 'variance') {
+    const closings = getFromStorage(STORAGE_KEYS.closings);
+    const { start, end } = getReportDateRange();
+    const filtered = closings.filter((record) => {
+      const created = new Date(record.createdAt);
+      return created >= start && created <= end;
+    }).slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    const rows = [];
+    filtered.forEach((record) => {
+      (record.sellers || []).forEach((seller) => {
+        const counted = Number(seller.countTotal) || 0;
+        const expected = Number(seller.total) || 0;
+        rows.push({
+          date: record.date,
+          seller: seller.name || `${seller.system || 'Unassigned'} · ${seller.cashier || 'Unassigned'}`,
+          system: seller.system || 'Unassigned',
+          sales: Number(seller.sales) || 0,
+          expected,
+          counted,
+          variance: counted - expected,
+          closedBy: record.closedBy || '—'
+        });
+      });
+    });
+
+    const unbalanced = rows.filter((row) => row.variance !== 0).length;
+    const totalExpected = rows.reduce((sum, row) => sum + row.expected, 0);
+    const totalCounted = rows.reduce((sum, row) => sum + row.counted, 0);
+
+    return {
+      title: 'Variance report (per seller)',
+      subtitle: `${rows.length} seller count(s) from ${filtered.length} closing(s) · ${unbalanced} out of balance · ${rangeLabel}`,
+      columns: [
+        { key: 'date', label: 'Date' },
+        { key: 'seller', label: 'Seller' },
+        { key: 'system', label: 'System' },
+        { key: 'sales', label: 'Transactions' },
+        { key: 'expected', label: 'Expected', money: true },
+        { key: 'counted', label: 'Counted', money: true },
+        { key: 'variance', label: 'Variance', money: true, cellClass: (v) => (Number(v) || 0) > 0 ? 'diff-excess' : (Number(v) || 0) < 0 ? 'diff-shortage' : '' },
+        { key: 'closedBy', label: 'Closed by' }
+      ],
+      rows,
+      totalsLabel: 'Totals',
+      totals: {
+        sales: rows.reduce((sum, row) => sum + row.sales, 0),
+        expected: totalExpected,
+        counted: totalCounted,
+        variance: totalCounted - totalExpected
+      }
     };
   }
 
@@ -12011,7 +12154,7 @@ function bootReady() {
     }
   }
 
-  const VALID_REPORT_TABS = ['sales', 'invoice', 'summary', 'totals', 'analysis', 'inventory', 'menu', 'orders', 'tax', 'payments', 'stock', 'products', 'daily', 'weekly', 'transactions', 'customers', 'refunds', 'purchases', 'closings', 'price', 'shift', 'void', 'leftover', 'promos', 'tables', 'kitchen', 'delivery', 'modifiers', 'tips', 'purchaseorders', 'branches', 'systems', 'receipts', 'bookorders'];
+  const VALID_REPORT_TABS = ['sales', 'invoice', 'summary', 'totals', 'analysis', 'inventory', 'menu', 'orders', 'tax', 'payments', 'stock', 'products', 'daily', 'weekly', 'transactions', 'customers', 'refunds', 'purchases', 'closings', 'xz', 'variance', 'price', 'shift', 'void', 'leftover', 'promos', 'tables', 'kitchen', 'delivery', 'modifiers', 'tips', 'purchaseorders', 'branches', 'systems', 'receipts', 'bookorders'];
   const VALID_PERIODS = ['today', '7d', '30d', 'all'];
   const savedReportTab = localStorage.getItem(STORAGE_KEYS.reportTab);
   if (savedReportTab && VALID_REPORT_TABS.includes(savedReportTab)) reportTab = savedReportTab;

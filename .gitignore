@@ -1,3 +1,6 @@
 db.json
 *.log
 desktop.ini
+node_modules/
+backups/
+
