@@ -4,6 +4,21 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>FasterFood POS</title>
+
+    <!-- Installed-app identity. See manifest.webmanifest and tools/make-icons.ps1. -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="description" content="Fast food point of sale and inventory control" />
+    <meta name="theme-color" content="#b91c1c" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="FasterFood" />
+    <meta name="msapplication-TileColor" content="#b91c1c" />
+    <meta name="msapplication-TileImage" content="/icons/icon-144.png" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+
     <script>
       try {
         if (localStorage.getItem('ff_session')) {
@@ -14,7 +29,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="style.css?v=20260923n" />
+    <link rel="stylesheet" href="style.css?v=20260926a" />
     <style>
       .fatal-error-chip {
         position: fixed;
@@ -169,6 +184,9 @@
           <span class="bell-icon">🔔</span>
           <span class="stock-alert-badge" id="stock-alert-badge">0</span>
         </div>
+        <button class="install-btn hidden" id="install-app-btn" onclick="promptAppInstall()" title="Install FasterFood on this device" aria-label="Install FasterFood on this device">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+        </button>
         <button class="theme-toggle-btn hidden" id="theme-toggle-btn" onclick="toggleTheme()" title="Toggle dark / light mode" aria-label="Toggle dark or light mode">
           <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
           <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
@@ -1945,6 +1963,36 @@
       <span class="toast-msg"></span>
     </div>
 
+    <div id="install-help-modal" class="modal hidden">
+      <div class="modal-card install-help-card">
+        <div class="modal-head">
+          <h3>Add FasterFood to your home screen</h3>
+          <button class="close-btn" onclick="closeInstallHelp()">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p class="form-hint">
+            On iPhone and iPad, Safari installs the app for you. It then opens
+            full screen with its own icon, like any other app.
+          </p>
+          <ol class="install-help-steps">
+            <li>Tap the <strong>Share</strong> button in the Safari toolbar &mdash; the square with an arrow pointing up.</li>
+            <li>Scroll down and tap <strong>Add to Home Screen</strong>.</li>
+            <li>Confirm the name, then tap <strong>Add</strong>.</li>
+            <li>Open FasterFood from your home screen from now on.</li>
+          </ol>
+          <p class="form-hint">
+            Android and desktop Chrome install the app automatically once the
+            page is served over HTTPS. This server is on plain HTTP, so use
+            Safari on iPhone or iPad, or open the app at
+            <code>http://localhost:5501</code> on this computer.
+          </p>
+        </div>
+        <div class="modal-actions">
+          <button class="action-btn secondary" onclick="closeInstallHelp()">Close</button>
+        </div>
+      </div>
+    </div>
+
     <div id="customer-modal" class="modal hidden">
       <div class="modal-card customer-card">
         <div class="modal-head">
@@ -2335,6 +2383,6 @@
       </div>
     </div>
 
-    <script src="pos.js?v=20260924j"></script>
+    <script src="pos.js?v=20260926a"></script>
   </body>
 </html>

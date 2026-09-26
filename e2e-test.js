@@ -112,6 +112,62 @@ async function main() {
   });
   check('invalid JSON returns 400', bad.status === 400, 'got ' + bad.status);
 
+  console.log('\n=== 12. Installable app assets (manifest, icons, service worker) ===');
+  const manifestRes = await fetch(BASE + '/manifest.webmanifest');
+  check('manifest returns 200', manifestRes.ok, 'got ' + manifestRes.status);
+  check('manifest served as application/manifest+json',
+    (manifestRes.headers.get('content-type') || '').includes('application/manifest+json'),
+    manifestRes.headers.get('content-type'));
+
+  const manifest = await manifestRes.json();
+  check('manifest parses', !!manifest && typeof manifest === 'object');
+  check('has a name and a short name', !!manifest.name && !!manifest.short_name,
+    manifest.name + ' / ' + manifest.short_name);
+  check('display is standalone', manifest.display === 'standalone', manifest.display);
+  check('start_url and scope are in scope', manifest.start_url === '/' && manifest.scope === '/',
+    manifest.start_url + ' ' + manifest.scope);
+  check('theme_color and background_color set', !!manifest.theme_color && !!manifest.background_color);
+
+  const declared = manifest.icons || [];
+  const has192 = declared.some((i) => i.sizes === '192x192');
+  const has512 = declared.some((i) => i.sizes === '512x512');
+  const hasMaskable = declared.some((i) => String(i.purpose || '').includes('maskable'));
+  check('declares a 192x192 icon', has192);
+  check('declares a 512x512 icon', has512);
+  check('declares a maskable icon for Android', hasMaskable);
+
+  // Every icon the manifest names must actually exist and be a real PNG.
+  for (const icon of declared) {
+    const res = await fetch(BASE + icon.src);
+    const type = res.headers.get('content-type') || '';
+    const isPng = res.ok && type.includes('image/png') &&
+      Buffer.from(await res.arrayBuffer()).subarray(0, 8).toString('hex') === '89504e470d0a1a0a';
+    check('icon served: ' + icon.src, isPng, 'status ' + res.status + ' type ' + type);
+  }
+
+  // Referenced by <link>/<meta> in pos-1.html, so they must resolve too.
+  for (const asset of ['/favicon.ico', '/icons/icon-32.png', '/icons/icon-144.png', '/icons/apple-touch-icon.png']) {
+    const res = await fetch(BASE + asset);
+    check('asset served: ' + asset, res.ok, 'got ' + res.status);
+  }
+
+  const swRes = await fetch(BASE + '/sw.js');
+  check('sw.js returns 200', swRes.ok, 'got ' + swRes.status);
+  check('sw.js is a script', (swRes.headers.get('content-type') || '').includes('javascript'),
+    swRes.headers.get('content-type'));
+  const swBody = await swRes.text();
+  // The worker must stay a pass-through. A respondWith here would let a
+  // cached copy of the menu or prices reach a live till.
+  check('sw.js does not intercept requests', !/respondWith/.test(swBody));
+  check('sw.js registers a fetch handler', /addEventListener\(\s*['"]fetch['"]/.test(swBody));
+
+  const page = await (await fetch(BASE + '/')).text();
+  check('page links the manifest', /rel="manifest"/.test(page));
+  check('page has an apple-touch-icon', /rel="apple-touch-icon"/.test(page));
+  check('page has a theme-color', /name="theme-color"/.test(page));
+  check('page no longer references the old logo files',
+    !/src="(logo|log)\.png"/.test(page));
+
   await pool.end();
   console.log('\n========================================');
   console.log('  ' + pass + ' passed, ' + fail + ' failed');

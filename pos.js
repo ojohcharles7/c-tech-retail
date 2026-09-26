@@ -2,7 +2,7 @@
 // Backend API base. When the page is served from another port
 // (e.g. VS Code Live Server on 5502), route all API calls to the
 // real POS server on 5501 via CORS so the app still works.
-window.__POS_VERSION = '20260924j';
+window.__POS_VERSION = '20260926a';
 window.addEventListener('error', (event) => {
   try {
     const message = String(event.error ? (event.error.message || event.error) : event.message);
@@ -171,6 +171,105 @@ function toggleTheme() {
   applyTheme(next);
   logAudit('Theme changed', `${next === 'dark' ? 'Dark' : 'Light'} mode enabled by ${currentUser ? currentUser.name : 'user'}`);
   showToast(`${next === 'dark' ? 'Dark' : 'Light'} mode enabled.`, 'success');
+}
+
+// ---------------------------------------------------------------- app install
+
+// Lets the cashier put FasterFood on this device's home screen or app list.
+// See sw.js for why there is a service worker that does nothing.
+let deferredInstallPrompt = null;
+
+function isAppInstalled() {
+  try {
+    if (window.matchMedia('(display-mode: standalone)').matches) return true;
+    if (window.matchMedia('(display-mode: window-controls-overlay)').matches) return true;
+    if (window.navigator.standalone === true) return true;
+  } catch (error) {}
+  return false;
+}
+
+// iOS Safari has no beforeinstallprompt, so home-screen install has to be
+// driven by hand. Everything else hides the button instead of showing a dead end.
+function isIosSafari() {
+  const ua = window.navigator.userAgent || '';
+  const iOS = /iPad|iPhone|iPod/.test(ua);
+  // iPadOS 13+ reports itself as a Mac, so trust the touch points too.
+  const iPadOS = /Macintosh/.test(ua) && typeof navigator.maxTouchPoints === 'number' && navigator.maxTouchPoints > 1;
+  const iOSBrowser = /CriOS|FxiOS|EdgiOS/.test(ua);
+  return (iOS || iPadOS) && !iOSBrowser;
+}
+
+function showInstallButton() {
+  const btn = document.getElementById('install-app-btn');
+  if (btn) btn.classList.remove('hidden');
+}
+
+function hideInstallButton() {
+  const btn = document.getElementById('install-app-btn');
+  if (btn) btn.classList.add('hidden');
+}
+
+function openInstallHelp() {
+  const modal = document.getElementById('install-help-modal');
+  if (modal) modal.classList.remove('hidden');
+}
+
+function closeInstallHelp() {
+  const modal = document.getElementById('install-help-modal');
+  if (modal) modal.classList.add('hidden');
+}
+
+function initAppInstall() {
+  if (isAppInstalled()) return;
+
+  window.addEventListener('beforeinstallprompt', (event) => {
+    // Hold on to the event; browsers allow one prompt per user gesture.
+    event.preventDefault();
+    deferredInstallPrompt = event;
+    hideInstallHelp();
+    showInstallButton();
+  });
+
+  window.addEventListener('appinstalled', () => {
+    deferredInstallPrompt = null;
+    hideInstallButton();
+    if (currentUser) showToast('FasterFood installed on this device.', 'success');
+  });
+
+  if (isIosSafari()) showInstallButton();
+
+  // Only a secure origin can run a worker. Over plain HTTP on the LAN this
+  // is a no-op rather than a console error; iOS install still works because it
+  // needs only the apple-touch-icon link.
+  if ('serviceWorker' in navigator && window.isSecureContext) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').catch((error) => {
+        console.warn('[POS] service worker registration skipped:', error && error.message);
+      });
+    });
+  }
+}
+
+async function promptAppInstall() {
+  if (deferredInstallPrompt) {
+    const prompt = deferredInstallPrompt;
+    deferredInstallPrompt = null;
+    try {
+      await prompt.prompt();
+      const choice = await prompt.userChoice;
+      if (choice && choice.outcome === 'accepted') hideInstallButton();
+      // A dismissed prompt can be re-offered on the next page load.
+      if (choice && choice.outcome === 'dismissed') showInstallButton();
+    } catch (error) {
+      console.warn('[POS] install prompt failed:', error && error.message);
+    }
+    return;
+  }
+  if (isIosSafari()) {
+    openInstallHelp();
+    return;
+  }
+  showToast('This browser cannot install the app. Use Chrome, Edge or Safari.', 'info');
 }
 
 function getTerminalSystem() {
@@ -12344,6 +12443,7 @@ function bootReady() {
 
   setTimeout(checkRecovery, 1200);
   applyHardwareUI();
+  initAppInstall();
 }
 
 boot();

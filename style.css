@@ -1600,6 +1600,58 @@ select:focus {
 html[data-theme="dark"] .theme-toggle-btn .icon-moon { display: none; }
 html[data-theme="dark"] .theme-toggle-btn .icon-sun { display: block; }
 
+.install-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.install-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  transform: translateY(-1px);
+}
+
+.install-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.install-help-card {
+  max-width: 460px;
+}
+
+.install-help-steps {
+  margin: 14px 0;
+  padding-left: 22px;
+  display: grid;
+  gap: 10px;
+  color: var(--text);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.install-help-steps strong {
+  font-weight: 700;
+}
+
+.install-help-card code {
+  font-family: monospace;
+  font-size: 0.86em;
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--panel-muted);
+  color: var(--text);
+}
+
 .main-panel {
   flex: 1;
   padding: 24px;
