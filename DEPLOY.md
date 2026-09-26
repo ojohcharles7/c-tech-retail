@@ -30,26 +30,50 @@ PostgreSQL must be running. It is a Windows service
 
 ### First-time host setup
 
-Run once, right-click → **Run as administrator**:
+Install **PostgreSQL 18** first (from postgresql.org, accept the defaults —
+the installer sets the `postgres` superuser password). Then copy this project
+folder across and run, right-click → **Run as administrator**:
 
 ```
 setup-admin.cmd
 ```
 
-It does four things and then starts the server:
+It does five things and then starts the server:
 
-1. Verifies `node.exe` exists (edit the `FF_NODE` line at the top of the
-   script if Node is not on the default path)
-2. Confirms the `postgresql-x64-18` service is running, starting it if not
-3. Opens TCP 5501 in Windows Firewall on all profiles
-4. Registers a **boot-start scheduled task** called `FasterFoodPOS` that runs
+1. Verifies `node.exe` and `server.js` are present (edit the `FF_NODE` line at
+   the top of the script if Node is somewhere unusual)
+2. Stops a POS server that is already running, so port 5501 is free
+3. Calls `pg-setup.ps1`, which configures PostgreSQL and creates the database
+   (see below)
+4. Opens TCP 5501 in Windows Firewall on all profiles
+5. Registers a **boot-start scheduled task** called `FasterFoodPOS` that runs
    the server as `SYSTEM`, then starts it and waits for port 5501 to answer
 
 After this you never start the server by hand again — it comes up with the PC,
 before anyone logs in.
 
-The script does **not** edit `postgresql.conf`. `listen_addresses` is already
-`'localhost'`, which is what keeps 5432 off the network. Confirm with:
+Every step checks the current state before changing it, so re-running the
+script on a working install is safe and reports "already correct".
+
+#### What `pg-setup.ps1` does
+
+Auto-detects the newest PostgreSQL under `C:\Program Files\PostgreSQL`, then:
+
+- sets `listen_addresses = 'localhost'` in `postgresql.conf` (keeps 5432 off
+  the LAN) and `trust` for `127.0.0.1` / `::1` in `pg_hba.conf`, backing both
+  up into `backups\` first, and restarting the service **only if** something
+  actually changed
+- creates role `ffapp` and database `fasterfood` owned by it, skipping either
+  if it already exists
+- restores a dump if you supplied one (see [Move to another PC](#move-to-another-pc))
+
+Run it on its own to preview without changing anything:
+
+```
+powershell -ExecutionPolicy Bypass -File pg-setup.ps1 -WhatIfOnly
+```
+
+Confirm 5432 is unreachable from the network:
 
 ```
 netstat -ano | findstr :5432
@@ -125,9 +149,21 @@ CREATE TABLE app_data (
 exposed as the `X-Data-Version` / `ETag` header on `GET /api/data`.
 
 `db.js` creates the table, adds the `updated_at` / `version` columns if they
-are missing, seeds any absent data keys with `[]`, and removes the legacy
-`ff_testkey` / `ff_session` / `ff_recovery` rows. It runs automatically at
-startup, so there is no separate migration step.
+are missing, and removes the legacy `ff_testkey` / `ff_session` /
+`ff_recovery` rows. It runs automatically at startup, so there is no separate
+migration step.
+
+`db.js` deliberately does **not** pre-create rows for the 21 keys. A brand new
+database is therefore genuinely empty, and the first browser to connect seeds
+it: `initStorage()` in `pos.js` fills any key that is absent with
+`defaultUsers` / `defaultInventory` / `defaultMenu` / `defaultSettings` and
+writes it back through `PUT /api/data/:key`.
+
+> Do not "helpfully" insert `[]` placeholders for these keys. The client only
+> seeds a key it finds *missing*, so a placeholder `[]` counts as present and
+> suppresses seeding — which leaves a fresh install with no users to log in
+> with, no menu and no inventory, and stores `ff_settings` as an empty array
+> instead of an object.
 
 ### 21 synchronised keys
 
@@ -197,20 +233,94 @@ backup-db.cmd
 ```
 
 Writes a timestamped compressed dump to `backups\` and prunes anything older
-than 30 days. To schedule it nightly, run once as Administrator:
+than 30 days. It dumps as `ffapp`, which owns `app_data` and authenticates via
+`trust` on localhost, so it never prompts for a password — important, because
+a prompt under Task Scheduler would hang forever.
+
+To schedule it nightly, run once as Administrator:
 
 ```
 schtasks /create /tn "FasterFood POS Backup" /tr "\"C:\path\to\MY-RETAIL\backup-db.cmd\"" /sc daily /st 02:00 /ru SYSTEM /rl HIGHEST /f
 ```
 
-Restore (this **overwrites** current data):
+Restore by hand (this **overwrites** current data):
 
 ```
-pg_restore -h 127.0.0.1 -U postgres -d fasterfood -c --clean backups\fasterfood-YYYYMMDD-HHMMSS.dump
+pg_restore -h 127.0.0.1 -U ffapp -d fasterfood --clean --if-exists --no-owner backups\fasterfood-YYYYMMDD-HHMMSS.dump
 ```
+
+On a new machine, prefer letting `setup-admin.cmd` do it — see
+[Move to another PC](#move-to-another-pc).
 
 `db.json` is no longer written. An old copy is kept in `backups\` purely as an
 archive.
+
+## Move to another PC
+
+Moving the live till to a different computer, keeping all data.
+
+### 1. On the OLD computer
+
+```
+backup-db.cmd
+```
+
+Note the filename it prints, e.g.
+`backups\fasterfood-20260926-205017.dump`. Copy **that one file** to the new
+PC — a USB stick or a network share. `backups\` is gitignored, so the dump does
+not travel through git.
+
+Then **shut the server down** on the old PC. Do this now, not at the end. If
+both machines serve at once, terminals silently split across two databases
+and the two diverge. Power the old host off once the new one is confirmed
+working.
+
+### 2. On the NEW computer
+
+1. Install **PostgreSQL 18** (defaults are fine).
+2. Install **Node.js 18 or newer**.
+3. Copy the project folder across — clone the repo, or copy the directory.
+   You need at least `server.js`, `db.js`, `pos.js`, `pos-1.html`, `style.css`,
+   `logo.png`, `log.png`, `find-server.html`, `menu-online.html`,
+   `package.json`, `package-lock.json`, `setup-admin.cmd` and `pg-setup.ps1`.
+4. Delete `node_modules\` if you copied it, then restore dependencies:
+   ```
+   npm install
+   ```
+5. Put the dump next to the project as `restore.dump`, or in
+   `backups\install\latest.dump`.
+6. Right-click `setup-admin.cmd` → **Run as administrator**, and answer **Y**
+   when offered the restore.
+
+It configures PostgreSQL, creates `ffapp` / `fasterfood`, restores the dump,
+registers the boot task, and starts the server. It prints the URL terminals
+should use, detected from the new machine's own adapter.
+
+### 3. Point the terminals at the new PC
+
+The new machine will have a **different IP**. Reserve the new address in the
+router and re-enter it on every terminal — or, to keep the existing
+`192.168.0.3` URL working, free `.3` in the router first (delete the old
+reservation), then reserve `.3` for the new PC's MAC address. DHCP will not
+hand out an address you have reserved.
+
+### 4. Verify
+
+```
+node e2e-test.js
+```
+
+30 checks covering key hydration, a simulated checkout, PostgreSQL durability
+and the restore-back step. It expects real data, so it only passes on a
+*migrated* install — a brand new empty install will fail the
+"real business data intact" checks, which is expected.
+
+Then change the default password. The app ships with `admin` / `123`.
+
+### Rolling back
+
+The old data is still in the dump. To go back, restore that dump on the old PC
+the same way. Nothing is lost as long as you keep the file.
 
 ## Production (keep the server running)
 
@@ -333,6 +443,25 @@ curl http://localhost:5501/api/data
 > debounced file write.
 
 ## Troubleshooting
+
+**Fresh install has no login / empty menu** — the database was seeded with `[]`
+placeholders instead of being left empty, so the client's own seeding was
+suppressed. See the warning in [Schema](#schema). Clear the placeholders and
+reload the page:
+```sql
+DELETE FROM app_data WHERE key IN ('ff_users','ff_inventory','ff_menu','ff_settings');
+```
+The next browser to connect re-seeds them with the built-in defaults.
+
+**`pg_restore` fails with "permission denied to create database"** — that is
+expected if you run it as `ffapp`. Only `postgres` can create databases;
+`pg-setup.ps1` handles this by provisioning as `postgres` and restoring as
+`ffapp`.
+
+**`psql` asks for a password during setup** — expected on a fresh install
+before `pg_hba.conf` is set to `trust`. Enter the `postgres` superuser
+password you chose during the PostgreSQL installer. It is used once, passed via
+the environment rather than the command line, and cleared afterwards.
 
 **Server doesn't start after a reboot** — check the task:
 ```

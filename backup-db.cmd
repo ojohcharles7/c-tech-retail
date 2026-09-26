@@ -6,6 +6,18 @@ REM ============================================================
 
 setlocal
 set "PGBIN=C:\Program Files\PostgreSQL\18\bin"
+if not exist "%PGBIN%\pg_dump.exe" (
+  for /f "delims=" %%d in ('dir /b /ad /o-n "C:\Program Files\PostgreSQL" 2^>nul') do (
+    if exist "C:\Program Files\PostgreSQL\%%d\bin\pg_dump.exe" (
+      set "PGBIN=C:\Program Files\PostgreSQL\%%d\bin"
+      goto :pgfound
+    )
+  )
+  echo ERROR: pg_dump.exe not found under "C:\Program Files\PostgreSQL".
+  echo        Install PostgreSQL, or set PGBIN in this script.
+  exit /b 1
+)
+:pgfound
 set "BACKUPDIR=%~dp0backups"
 if not exist "%BACKUPDIR%" mkdir "%BACKUPDIR%"
 
@@ -18,7 +30,9 @@ echo Backing up database "fasterfood" to:
 echo   %OUT%
 echo.
 
-"%PGBIN%\pg_dump.exe" -h 127.0.0.1 -p 5432 -U postgres -d fasterfood -Fc -f "%OUT%"
+REM -U ffapp owns app_data and authenticates via pg_hba trust, so this
+REM never prompts. Using -U postgres would hang forever under Task Scheduler.
+"%PGBIN%\pg_dump.exe" -h 127.0.0.1 -p 5432 -U ffapp -d fasterfood -Fc -f "%OUT%"
 if errorlevel 1 (
   echo.
   echo BACKUP FAILED - see message above.

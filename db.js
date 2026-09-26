@@ -13,14 +13,6 @@ const config = {
 
 const LEGACY_KEYS = ['ff_testkey', 'ff_session', 'ff_recovery'];
 
-const REQUIRED_KEYS = [
-  'ff_users', 'ff_inventory', 'ff_menu', 'ff_sales', 'ff_settings',
-  'ff_stock_log', 'ff_audit', 'ff_shifts', 'ff_voids', 'ff_customers',
-  'ff_price_history', 'ff_purchases', 'ff_closings', 'ff_refunds',
-  'ff_leftovers', 'ff_purchase_orders', 'ff_book_orders',
-  'ff_discounts', 'ff_promos', 'ff_suppliers', 'ff_grns'
-];
-
 const cache = new Map();
 const versions = new Map();
 const writeQueues = new Map();
@@ -44,12 +36,6 @@ async function ensureSchema(client) {
   await client.query('ALTER TABLE app_data ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now()');
   await client.query('ALTER TABLE app_data ADD COLUMN IF NOT EXISTS version bigint NOT NULL DEFAULT 1');
   await client.query('DELETE FROM app_data WHERE key = ANY($1::text[])', [LEGACY_KEYS]);
-  for (const key of REQUIRED_KEYS) {
-    await client.query(
-      'INSERT INTO app_data (key, value) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING',
-      [key, '[]']
-    );
-  }
 }
 
 async function refreshCache() {

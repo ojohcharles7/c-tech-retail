@@ -2,18 +2,21 @@
 setlocal EnableExtensions EnableDelayedExpansion
 
 REM ============================================================
-REM  FasterFood POS - one-time administrator setup
+REM  FasterFood POS - installer
 REM  Right-click this file -> "Run as administrator"
 REM
-REM  1. Verifies Node.js is installed
-REM  2. Ensures the PostgreSQL service is running
-REM  3. Opens TCP 5501 in Windows Firewall on all profiles
-REM  4. Registers a boot-start scheduled task and starts it
+REM  1. Locates Node.js
+REM  2. Stops a POS server that is already running
+REM  3. Configures PostgreSQL and creates the role + database
+REM  4. Optionally restores a database dump
+REM  5. Registers a boot-start scheduled task and starts the server
 REM
-REM  NOTE: this script does NOT edit postgresql.conf.
-REM  listen_addresses is already 'localhost', so port 5432 is
-REM  never reachable from the network. Verify with:
-REM    netstat -ano | findstr :5432
+REM  Safe to re-run. Every step checks before it changes anything.
+REM
+REM  TO MOVE EXISTING DATA ONTO THIS PC, copy a dump to either
+REM     restore.dump                 (next to this script)
+REM     backups\install\latest.dump
+REM  before running. You will be asked whether to restore it.
 REM ============================================================
 
 net session >nul 2>&1
@@ -26,64 +29,103 @@ if errorlevel 1 (
   exit /b 1
 )
 
+set "FF_WORKDIR=%~dp0"
+set "FF_SCRIPT=%~dp0server.js"
+set "FF_PGSETUP=%~dp0pg-setup.ps1"
+
 REM ---------- 1. Node.js ----------
-REM Change this line if Node.js is installed somewhere else.
+REM Change this line only if Node.js is installed somewhere unusual.
 set "FF_NODE=D:\webapp test run\node.exe"
 if not exist "!FF_NODE!" for /f "delims=" %%i in ('where node 2^>nul') do set "FF_NODE=%%i"
+if not exist "!FF_NODE!" if exist "%ProgramFiles%\nodejs\node.exe" set "FF_NODE=%ProgramFiles%\nodejs\node.exe"
 
 if not exist "!FF_NODE!" (
   echo.
   echo ERROR: node.exe was not found.
-  echo        Edit the FF_NODE line near the top of this script and
-  echo        point it at your node.exe, then run it again.
+  echo        Install Node.js 18 or newer, or edit the FF_NODE line
+  echo        near the top of this script to point at node.exe.
   echo.
   pause
   exit /b 1
 )
-
-set "FF_SCRIPT=%~dp0server.js"
-set "FF_WORKDIR=%~dp0"
 
 if not exist "!FF_SCRIPT!" (
   echo.
   echo ERROR: server.js not found next to this script:
   echo        !FF_SCRIPT!
+  echo        Copy the whole project folder before running setup.
+  echo.
+  pause
+  exit /b 1
+)
+
+if not exist "!FF_PGSETUP!" (
+  echo.
+  echo ERROR: pg-setup.ps1 not found next to this script:
+  echo        !FF_PGSETUP!
+  echo        Copy the whole project folder before running setup.
   echo.
   pause
   exit /b 1
 )
 
 echo.
-echo [1/4] Node.js  : !FF_NODE!
-echo       Server  : !FF_SCRIPT!
+echo [1/5] Node.js  : !FF_NODE!
+echo       Project  : !FF_WORKDIR!
 
-REM ---------- 2. PostgreSQL ----------
+REM ---------- 2. Stop a running server ----------
 echo.
-echo [2/4] Checking PostgreSQL service ...
-sc query postgresql-x64-18 | findstr /C:"RUNNING" >nul
-if errorlevel 1 (
-  net start postgresql-x64-18
-  timeout /t 3 /nobreak >nul
+echo [2/5] Stopping any running POS server ...
+schtasks /end /tn "FasterFoodPOS" >nul 2>&1
+"%SystemRoot%\System32\timeout.exe" /t 2 /nobreak >nul
+for /f "tokens=5" %%p in ('netstat -ano ^| findstr /C:":5501" ^| findstr /C:"LISTENING"') do (
+  echo       port 5501 held by PID %%p - stop it before continuing.
+  echo.
+  pause
+  exit /b 1
+)
+echo       port 5501 is free.
+
+REM ---------- 3 + 4. PostgreSQL, then optional restore ----------
+set "FF_DUMP="
+if exist "!FF_WORKDIR!restore.dump" set "FF_DUMP=!FF_WORKDIR!restore.dump"
+if not defined FF_DUMP if exist "!FF_WORKDIR!backups\install\latest.dump" set "FF_DUMP=!FF_WORKDIR!backups\install\latest.dump"
+
+set "FF_RESTORE="
+if defined FF_DUMP (
+  echo.
+  echo A database dump was found:
+  echo    !FF_DUMP!
+  echo.
+  echo        YES - restore it. Use this when MOVING data to this PC.
+  echo        NO  - keep what is already in the database.
+  echo.
+  choice /C YN /N /M "        Restore this dump? [Y/N] "
+  if errorlevel 2 (set "FF_DUMP=") else (set "FF_RESTORE=1")
+)
+
+echo.
+echo [3/5] Configuring PostgreSQL, role and database ...
+
+if defined FF_DUMP (
+  powershell -NoProfile -ExecutionPolicy Bypass -File "!FF_PGSETUP!" -Restore -Dump "!FF_DUMP!"
 ) else (
-  echo       already running.
+  powershell -NoProfile -ExecutionPolicy Bypass -File "!FF_PGSETUP!"
 )
 
-sc query postgresql-x64-18 | findstr /C:"RUNNING" >nul
 if errorlevel 1 (
   echo.
-  echo ERROR: PostgreSQL is not running. Fix that first, then re-run.
-  echo        Check: Get-Service postgresql-x64-18
+  echo ERROR: PostgreSQL setup failed. See the messages above.
   echo.
   pause
   exit /b 1
 )
 
-REM ---------- 3. Firewall ----------
+REM ---------- 5. Boot task ----------
 echo.
-echo [3/4] Opening TCP 5501 in Windows Firewall ...
+echo [4/5] Opening TCP 5501 in Windows Firewall ...
 netsh advfirewall firewall delete rule name="FasterFood POS" >nul 2>&1
 netsh advfirewall firewall add rule name="FasterFood POS" dir=in action=allow protocol=TCP localport=5501 profile=any
-
 if errorlevel 1 (
   echo.
   echo ERROR: could not add the firewall rule.
@@ -92,15 +134,13 @@ if errorlevel 1 (
   exit /b 1
 )
 
-REM ---------- 4. Boot task ----------
 echo.
-echo [4/4] Registering the boot-start scheduled task ...
+echo [5/5] Registering the boot-start scheduled task ...
 echo       Task name : FasterFoodPOS
 echo       Runs as   : SYSTEM, at every boot
 echo       Command   : "!FF_NODE!" "!FF_SCRIPT!"
 
 set "FF_PS1=%TEMP%\ff-register-task.ps1"
-
 >"!FF_PS1!"  echo $ErrorActionPreference = 'Stop'
 >>"!FF_PS1!" echo $quoted = [char]34 + $env:FF_SCRIPT + [char]34
 >>"!FF_PS1!" echo $action = New-ScheduledTaskAction -Execute $env:FF_NODE -Argument $quoted -WorkingDirectory $env:FF_WORKDIR
@@ -120,17 +160,15 @@ if not "%FF_RC%"=="0" (
   pause
   exit /b 1
 )
-
 echo       registered.
 
-REM ---------- start it now ----------
 echo.
 echo Starting the task ...
 schtasks /run /tn "FasterFoodPOS" >nul 2>&1
 
 set /a FF_WAIT=0
 :wait_loop
-timeout /t 2 /nobreak >nul
+"%SystemRoot%\System32\timeout.exe" /t 2 /nobreak >nul
 netstat -ano | findstr /C:":5501" | findstr /C:"LISTENING" >nul
 if not errorlevel 1 goto wait_ok
 set /a FF_WAIT+=2
@@ -139,23 +177,24 @@ goto wait_loop
 
 :wait_fail
 echo.
-echo WARNING: the task started but nothing is listening on port 5501 yet.
-echo          Open Task Scheduler -^> Task Scheduler Library -^> FasterFoodPOS
-echo          and check the "Last Run Result" for the reason.
-echo.
-echo          Common cause: node.exe lives on a drive that is not ready
-echo          at boot. Move Node to C:\ or start the task manually.
+echo WARNING: the task started but nothing is listening on port 5501.
+echo          Open Task Scheduler -^> FasterFoodPOS and read "Last Run Result".
+echo          0x1 usually means node.exe is missing or its drive was not
+echo          ready at boot.
 echo.
 pause
 exit /b 1
 
 :wait_ok
-echo       listening on port 5501.
+set "FF_IP="
+for /f "usebackq delims=" %%i in (`powershell -NoProfile -Command "(Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -notlike '127.*' -and $_.PrefixOrigin -ne 'WellKnown' -and $_.InterfaceAlias -notmatch 'vEthernet|VMware|VirtualBox|Bluetooth|Loopback' } | Sort-Object InterfaceMetric | Select-Object -First 1).IPAddress"`) do set "FF_IP=%%i"
+if not defined FF_IP set "FF_IP=localhost"
+
 echo.
 echo ============================================================
 echo  Setup complete.
 echo.
-echo  Terminals open:   http://192.168.0.3:5501
+echo  Terminals open:   http://!FF_IP!:5501
 echo  Local check:      http://localhost:5501
 echo  Database check:   netstat -ano ^| findstr :5432
 echo                    (should show 127.0.0.1 / [::1] only)
@@ -163,8 +202,11 @@ echo.
 echo  The server now starts by itself every time this PC boots.
 echo  Do not also run "npm start" by hand - port 5501 would clash.
 echo
-echo  IMPORTANT: reserve 192.168.0.3 in your router (192.168.0.1)
-echo  so this address never changes. See DEPLOY.md - "Fixed IP".
+echo  Reserve !FF_IP! in your router (192.168.0.1) so the address
+echo  never changes. See DEPLOY.md - "Fixed IP".
+echo
+echo  If you moved data here, change the default password:
+echo  the app ships with admin / 123.
 echo ============================================================
 echo.
 pause
