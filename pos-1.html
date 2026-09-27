@@ -922,6 +922,11 @@
             </div>
           </div>
 
+          <div class="report-tabs-switch" id="report-tabs-switch">
+            <label for="report-tab-select">Report</label>
+            <select id="report-tab-select" onchange="setReportTab(this.value)"></select>
+          </div>
+
           <div class="report-tabs">
             <button class="report-tab active" data-report="sales">Sales report</button>
             <button class="report-tab" data-report="invoice">Invoicing report</button>
@@ -979,6 +984,10 @@
                 <div class="report-view-switch" id="report-view-switch">
                   <label>View</label>
                   <select id="report-view-select" onchange="setReportView(this.value)"></select>
+                </div>
+                <div class="report-layout-switch" id="report-layout-switch">
+                  <label>Layout</label>
+                  <select id="report-layout-select" onchange="setReportLayout(this.value)"></select>
                 </div>
                 <div class="report-actions">
                   <button class="action-btn excel" onclick="downloadActiveReport()">Excel</button>

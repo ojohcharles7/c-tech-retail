@@ -1,5 +1,6 @@
 
 :root {
+  color-scheme: light;
   --bg: #F5F7FA;
   --panel: ghostwhite;
   --panel-alt: ghostwhite;
@@ -33,9 +34,23 @@
   --radius-sm: 10px;
   --grad-primary: linear-gradient(135deg, #dc2626, #b91c1c 65%);
   --grad-sheen: linear-gradient(105deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 40%);
+  --chart-grid: #e8d5d5;
+  --chart-axis-text: #a04c4c;
+  --chart-day-text: #8a5252;
+  --chart-today-text: #7f1d1d;
+  --chart-value-text: #b91c1c;
+  --chart-point: #ffffff;
+  --chart-point-stroke: #b91c1c;
+  --chart-point-today: #7f1d1d;
+  --chart-line-1: #dc2626;
+  --chart-line-2: #b91c1c;
+  --chart-line-3: #7f1d1d;
+  --chart-area-top: #b91c1c;
+  --chart-area-bottom: #b91c1c;
 }
 
 html[data-theme="dark"] {
+  color-scheme: dark;
   --bg: #0c0e12;
   --panel: #16181e;
   --panel-alt: #1b1e26;
@@ -61,6 +76,22 @@ html[data-theme="dark"] {
   --lemon: #A3E635;
   --lemon-dark: #65A30D;
   --lemon-soft: #202c16;
+  /* Chart colours are referenced by the inline SVG in pos.js, which is
+     why they live here: the revenue chart draws a fixed set of hues and
+     needs a dark variant or its labels sit at roughly 1.1:1 contrast. */
+  --chart-grid: #3a2f38;
+  --chart-axis-text: #e8a3a3;
+  --chart-day-text: #cbb0b0;
+  --chart-today-text: #ff9d9d;
+  --chart-value-text: #ff9d9d;
+  --chart-point: #1b1e26;
+  --chart-point-stroke: #f26d6d;
+  --chart-point-today: #f26d6d;
+  --chart-line-1: #f87171;
+  --chart-line-2: #ef4444;
+  --chart-line-3: #fca5a5;
+  --chart-area-top: #b91c1c;
+  --chart-area-bottom: #b91c1c;
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.5), 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow: 0 12px 32px rgba(0, 0, 0, 0.6), 0 2px 8px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.7), 0 4px 12px rgba(0, 0, 0, 0.5);
@@ -2221,6 +2252,58 @@ html[data-theme="dark"] #orders-stats .stat-label {
 .chart-title-icon svg {
   width: 18px;
   height: 18px;
+}
+
+/* The revenue chart is inline SVG built in pos.js. Presentation attributes
+   cannot read custom properties, so the SVG carries these classes and the
+   theme-aware colours are applied here instead. */
+.chart-gridline {
+  stroke: var(--chart-grid);
+}
+
+.chart-axis-label {
+  fill: var(--chart-axis-text);
+}
+
+.chart-day-label {
+  fill: var(--chart-day-text);
+}
+
+.chart-day-label.today {
+  fill: var(--chart-today-text);
+}
+
+.chart-value-label {
+  fill: var(--chart-value-text);
+}
+
+.chart-point {
+  fill: var(--chart-point);
+  stroke: var(--chart-point-stroke);
+}
+
+.chart-point.today {
+  fill: var(--chart-point-today);
+}
+
+.chart-stop-1 {
+  stop-color: var(--chart-line-1);
+}
+
+.chart-stop-2 {
+  stop-color: var(--chart-line-2);
+}
+
+.chart-stop-3 {
+  stop-color: var(--chart-line-3);
+}
+
+.chart-area-stop-1 {
+  stop-color: var(--chart-area-top);
+}
+
+.chart-area-stop-2 {
+  stop-color: var(--chart-area-bottom);
 }
 
 .revenue-card .line-chart {
@@ -5245,6 +5328,20 @@ html[data-theme="dark"] .orders-table tbody tr.order-row.open {
   white-space: nowrap;
 }
 
+html[data-theme="dark"] .pay-pill {
+  background: #1e2338;
+  border-color: #2f3757;
+  color: #aab4ea;
+}
+
+html[data-theme="dark"] .qty-badge {
+  background: #262b35;
+}
+
+html[data-theme="dark"] .status-tag.voided {
+  border-color: #4a2229;
+}
+
 .qty-badge {
   display: inline-flex;
   min-width: 30px;
@@ -6266,6 +6363,48 @@ html[data-theme="dark"] .panel-sub {
   margin-top: 0;
 }
 
+/* The phone layout replaces the 40 report buttons with one dropdown.
+   The buttons stay in the DOM and stay the source of truth; only their
+   visibility changes. */
+.report-tabs-switch {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--panel);
+}
+
+.report-tabs-switch label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-soft);
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.report-tabs-switch select {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 12px 10px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  outline: none;
+}
+
+.report-tabs-switch select:focus {
+  border-color: var(--primary);
+}
+
 .pagination {
   display: flex;
   flex-wrap: wrap;
@@ -6399,6 +6538,145 @@ html[data-theme="dark"] .panel-sub {
 
 .report-view-switch select:focus {
   border-color: var(--primary);
+}
+
+.report-layout-switch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px 6px 12px;
+  background: var(--panel-muted);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.report-layout-switch label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-soft);
+  white-space: nowrap;
+}
+
+.report-layout-switch select {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 7px 10px;
+  font-weight: 700;
+  font-size: 0.84rem;
+  cursor: pointer;
+  outline: none;
+}
+
+.report-layout-switch select:focus {
+  border-color: var(--primary);
+}
+
+/* Cards layout for reports. Web only: on phones the report table keeps its
+   existing scrollable behaviour, so the control is hidden there. */
+@media (min-width: 721px) {
+  .report-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+    padding: 4px;
+  }
+
+  .report-card {
+    background: var(--panel-alt);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .report-card:hover {
+    border-color: var(--line-strong);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .report-clickable-row {
+    cursor: pointer;
+  }
+
+  .report-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 11px 14px;
+    background: var(--panel-muted);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .report-card-title {
+    font-weight: 800;
+    font-size: 0.95rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .report-card-meta {
+    flex: 0 0 auto;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-soft);
+  }
+
+  .report-card-body {
+    padding: 4px 14px 10px;
+  }
+
+  .report-card-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .report-card-row:last-child {
+    border-bottom: none;
+  }
+
+  .report-card-label {
+    flex: 0 0 auto;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-soft);
+  }
+
+  .report-card-value {
+    min-width: 0;
+    text-align: right;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+  }
+
+  .report-card-totals {
+    margin-top: 14px;
+    border-color: var(--primary);
+  }
+
+  .report-cards-empty {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 720px) {
+  .report-layout-switch {
+    display: none;
+  }
 }
 
 .analysis-graph-wrap {
@@ -8303,6 +8581,281 @@ html[data-theme="dark"] .panel-sub {
   }
 
   /* Reports */
+  .report-head {
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  /* One dropdown instead of 40 buttons to scroll past. */
+  .report-tabs-switch {
+    display: flex;
+  }
+
+  .report-tabs {
+    display: none;
+  }
+
+  /* Shift management */
+  /* A time input refuses to shrink below about 121px, and the pairs are
+     flex: 1 with the default min-width: auto, so on a phone the two
+     pairs push straight out of the row and scroll the whole page
+     sideways. Let the enable toggle have its own line, then give the
+     two times a real share of the width. */
+  .shift-config-row {
+    flex-wrap: wrap;
+    row-gap: 10px;
+  }
+
+  .shift-enable {
+    flex: 1 0 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .shift-config-name {
+    min-width: 0;
+  }
+
+  .shift-time-pair {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .shift-time-pair input {
+    min-width: 0;
+  }
+
+  /* The badge and the End shift button no longer fit beside the shift
+     name, so they drop to their own full-width line instead of
+     squeezing the label onto two lines. */
+  .list-row.shift-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .list-row.shift-row .row-actions {
+    justify-content: space-between;
+  }
+
+  .list-row.shift-row .shift-end-btn {
+    flex: 1;
+    justify-content: center;
+    min-height: 44px;
+    white-space: nowrap;
+  }
+
+  .card-actions .action-btn {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+  }
+
+  .shift-gate-item {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+
+  /* All orders: the table is 1063px wide and its Action column alone is
+     wider than a phone, so stacking each order into a card beats asking
+     someone to swipe sideways through three screens to reach Void. */
+  .orders-table thead {
+    display: none;
+  }
+
+  /* The generic mobile rule above sets min-width: 620px on every table
+     so wide tables stay scrollable. The order cards are meant to fit the
+     screen, so that floor has to come off here. */
+  .table-wrap .orders-table {
+    min-width: 0;
+  }
+
+  .orders-table,
+  .orders-table tbody,
+  .orders-table tr,
+  .orders-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .orders-table tbody tr.order-row {
+    background: var(--panel-alt);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+
+  .orders-table tbody tr.order-row > td {
+    padding: 0;
+    border-bottom: none;
+  }
+
+  .orders-table tbody tr.order-row:hover {
+    background: var(--panel-alt);
+  }
+
+  .orders-table td.expand-col {
+    width: auto;
+    padding: 8px 10px 0;
+    text-align: left;
+  }
+
+  .orders-table td.expand-col .expand-btn {
+    width: 100%;
+  }
+
+  .orders-table td.order-cell-invoice {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 12px;
+  }
+
+  .orders-table td[data-label] {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 9px 12px;
+    border-top: 1px solid var(--line);
+    text-align: left;
+  }
+
+  .orders-table td[data-label]::before {
+    content: attr(data-label);
+    flex: 0 0 auto;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-soft);
+  }
+
+  .orders-table td.order-total {
+    font-size: 1.05rem;
+  }
+
+  .orders-table td.order-cell-actions {
+    padding: 10px 12px;
+    border-top: 1px solid var(--line);
+  }
+
+  .orders-table td.order-cell-actions .row-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    width: 100%;
+  }
+
+  .orders-table td.order-cell-actions .table-action {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
+  }
+
+  /* The expanded product list is a sibling row, so it needs its own
+     card treatment rather than the label layout above. */
+  .orders-table tbody tr.order-detail-row {
+    margin-bottom: 10px;
+  }
+
+  .orders-table tbody tr.order-detail-row > td {
+    padding: 0 12px 12px;
+    border: 1px solid var(--line);
+    border-top: none;
+    border-radius: 0 0 12px 12px;
+    background: var(--panel-alt);
+  }
+
+  /* Restaurant performance: the chart title plus the "this week" pill
+     could not fit side by side, so the card's min-content width forced
+     the whole page to scroll sideways on a phone. */
+  .charts-grid .card-panel {
+    min-width: 0;
+  }
+
+  .chart-head {
+    flex-wrap: wrap;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .chart-head h3 {
+    min-width: 0;
+    flex-wrap: wrap;
+  }
+
+  /* Give the pie the full card width on top and let the legend sit
+     underneath instead of being squeezed into ~130px beside it. */
+  .pie-chart {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+  }
+
+  .pie-wrap {
+    width: 100%;
+    height: 180px;
+  }
+
+  .pie-svg {
+    width: 180px;
+    height: 180px;
+  }
+
+  .pie-legend {
+    width: 100%;
+  }
+
+  /* The View switch and the export buttons share one flex row on a
+     desktop, which squeezes four buttons into about 43px each on a
+     phone. Stack them instead, and give the buttons a real grid. */
+  .report-tools {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .report-view-switch {
+    width: 100%;
+  }
+
+  .report-view-switch select {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .report-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    width: 100%;
+  }
+
+  .report-actions .action-btn {
+    width: 100%;
+    min-width: 0;
+    padding: 12px 8px;
+    white-space: nowrap;
+  }
+
+  /* A wide report is wider than a phone. Let the table scroll inside
+     its own box instead of dragging the whole page sideways. */
+  .report-view .table-wrap {
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .report-view .table-wrap table {
+    min-width: 560px;
+  }
+
   .report-toolbar {
     flex-direction: column;
     align-items: stretch;

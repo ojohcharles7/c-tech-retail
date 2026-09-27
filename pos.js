@@ -1429,9 +1429,15 @@ function renderRevenueChart() {
   }
 
   const container = document.getElementById('revenue-line-chart');
-  const width = 620;
+  // Draw the viewBox at the element's real pixel width so 1 SVG unit maps
+  // to 1 CSS pixel. A fixed 620-unit viewBox got squeezed to ~0.58x on a
+  // phone, shrinking the day and currency labels down to ~5px.
+  const width = Math.max(200, Math.round(container.clientWidth || 620));
   const height = 210;
-  const padX = 30;
+  // Narrow screens have too little room for 7 day names and 7 amounts side
+  // by side, so thin the labels out instead of letting them overlap.
+  const narrow = width < 420;
+  const padX = narrow ? 40 : 30;
   const padTop = 22;
   const padBottom = 32;
 
@@ -1452,8 +1458,8 @@ function renderRevenueChart() {
     const value = ((max * (i + 1)) / 4);
     const y = padTop + (height - padTop - padBottom) * (1 - (i + 1) / 4);
     return `
-      <line x1="${padX}" y1="${y.toFixed(1)}" x2="${width - padX}" y2="${y.toFixed(1)}" stroke="#e8d5d5" stroke-width="1" stroke-dasharray="4 4" />
-      <text x="${padX - 6}" y="${(y + 3).toFixed(1)}" text-anchor="end" font-size="9" fill="#b05959">${formatCurrency(value)}</text>
+      <line class="chart-gridline" x1="${padX}" y1="${y.toFixed(1)}" x2="${width - padX}" y2="${y.toFixed(1)}" stroke-width="1" stroke-dasharray="4 4" />
+      <text class="chart-axis-label" x="${padX - 6}" y="${(y + 3).toFixed(1)}" text-anchor="end" font-size="9">${narrow ? Math.round(value) : formatCurrency(value)}</text>
     `;
   }).join('');
 
@@ -1462,13 +1468,13 @@ function renderRevenueChart() {
       ${gridLines}
       <defs>
         <linearGradient id="revenue-area" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#b91c1c" stop-opacity="0.32" />
-          <stop offset="100%" stop-color="#b91c1c" stop-opacity="0.02" />
+          <stop class="chart-area-stop-1" offset="0%" stop-opacity="0.32" />
+          <stop class="chart-area-stop-2" offset="100%" stop-opacity="0.02" />
         </linearGradient>
         <linearGradient id="revenue-line-grad" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stop-color="#dc2626" />
-          <stop offset="60%" stop-color="#b91c1c" />
-          <stop offset="100%" stop-color="#7f1d1d" />
+          <stop class="chart-stop-1" offset="0%" />
+          <stop class="chart-stop-2" offset="60%" />
+          <stop class="chart-stop-3" offset="100%" />
         </linearGradient>
       </defs>
       <path d="${areaPath}" fill="url(#revenue-area)" />
@@ -1476,12 +1482,17 @@ function renderRevenueChart() {
       ${points.map((point, index) => {
         const isToday = point.day.date.toDateString() === today.toDateString();
         const label = isToday ? 'Today' : point.day.label;
+        const isPeak = point.day.total === max;
+        // On a phone show every other day name, and only the peak and today
+        // amounts, so the labels stay readable instead of piling up.
+        const showDay = !narrow || isToday || index % 2 === 0;
+        const showValue = !narrow || isToday || isPeak;
         return `
-          <circle cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="${isToday ? 7 : 4.5}" fill="${isToday ? '#7f1d1d' : '#ffffff'}" stroke="#b91c1c" stroke-width="${isToday ? 3.5 : 2}">
+          <circle class="chart-point${isToday ? ' today' : ''}" cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="${isToday ? 7 : 4.5}" stroke-width="${isToday ? 3.5 : 2}">
             <title>${point.day.date.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })} — ${formatCurrency(point.day.total)}</title>
           </circle>
-          <text x="${point.x.toFixed(1)}" y="${height - 12}" text-anchor="middle" font-size="10.5" font-weight="${isToday ? 800 : 700}" fill="${isToday ? '#7f1d1d' : '#8a5252'}">${label}</text>
-          <text x="${point.x.toFixed(1)}" y="${(point.y - 11).toFixed(1)}" text-anchor="middle" font-size="9.5" font-weight="700" fill="#7f1d1d">${point.day.total ? formatCurrency(point.day.total) : ''}</text>
+          ${showDay ? `<text class="chart-day-label${isToday ? ' today' : ''}" x="${point.x.toFixed(1)}" y="${height - 12}" text-anchor="middle" font-size="10.5" font-weight="${isToday ? 800 : 700}">${label}</text>` : ''}
+          ${showValue && point.day.total ? `<text class="chart-value-label" x="${point.x.toFixed(1)}" y="${(point.y - 11).toFixed(1)}" text-anchor="middle" font-size="9.5" font-weight="700">${formatCurrency(point.day.total)}</text>` : ''}
         `;
       }).join('')}
     </svg>
@@ -4703,7 +4714,7 @@ function renderOrdersManager() {
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
                 </button>
               </td>
-              <td>
+              <td class="order-cell-invoice">
                 <span class="invoice-chip">#${sale.invoice}</span>
                 ${sale.table ? `<span class="status-tag table">Table ${escapeHtml(sale.table)}</span>` : ''}
                 ${sale.orderType && sale.orderType !== 'dinein' ? `<span class="status-tag ${sale.orderType}">${sale.orderType.charAt(0).toUpperCase() + sale.orderType.slice(1)}</span>` : ''}
@@ -4711,12 +4722,12 @@ function renderOrdersManager() {
                 ${sale.system ? `<span class="status-tag system">${escapeHtml(sale.system)}</span>` : ''}
                 ${hasVoid ? '<span class="status-tag voided">Voided</span>' : ''}
               </td>
-              <td class="order-time">${new Date(sale.createdAt).toLocaleString()}</td>
-              <td>${sale.cashier || '—'}</td>
-              <td><span class="pay-pill">${payment}</span></td>
-              <td class="num"><span class="qty-badge">${activeQty}</span></td>
-              <td class="num order-total">${formatCurrency(sale.total)}</td>
-              ${canVoid() ? `<td><div class="row-actions">${receiptBtn}${sendBtn}${voidBtn}${refundBtn}</div></td>` : `<td><div class="row-actions">${receiptBtn}${sendBtn}</div></td>`}
+              <td class="order-time" data-label="Time">${new Date(sale.createdAt).toLocaleString()}</td>
+              <td data-label="Cashier">${sale.cashier || '—'}</td>
+              <td data-label="Payment"><span class="pay-pill">${payment}</span></td>
+              <td class="num" data-label="Items"><span class="qty-badge">${activeQty}</span></td>
+              <td class="num order-total" data-label="Total">${formatCurrency(sale.total)}</td>
+              ${canVoid() ? `<td class="order-cell-actions"><div class="row-actions">${receiptBtn}${sendBtn}${voidBtn}${refundBtn}</div></td>` : `<td class="order-cell-actions"><div class="row-actions">${receiptBtn}${sendBtn}</div></td>`}
             </tr>
             ${open ? `<tr class="order-detail-row"><td colspan="${colSpan}"><div class="order-detail">${itemsHtml || '<div class="order-item"><span class="muted">No products in this order.</span></div>'}</div></td></tr>` : ''}
           `;
@@ -4920,6 +4931,7 @@ let reportTo = null;
 let reportPage = 1;
 let reportSearch = '';
 let reportViews = {};
+let reportLayouts = {};
 const REPORT_PAGE_SIZE = 15;
 let inventoryPage = 1;
 let inventoryFilter = 'all';
@@ -5054,7 +5066,34 @@ function setReportTab(tab) {
   document.querySelectorAll('.report-tab').forEach((button) => {
     button.classList.toggle('active', button.dataset.report === tab);
   });
+  syncReportTabSelect();
   renderReports();
+}
+
+// The phone layout swaps the 40 report buttons for one dropdown. It is
+// built from the buttons themselves, so the list, the labels and the
+// feature/role gating can never drift out of step with the desktop row.
+function syncReportTabSelect() {
+  const select = document.getElementById('report-tab-select');
+  const switchEl = document.getElementById('report-tabs-switch');
+  if (!select || !switchEl) return;
+
+  const tabs = [...document.querySelectorAll('.report-tab')]
+    .filter((button) => !button.classList.contains('hidden'));
+
+  select.innerHTML = tabs
+    .map((button) => `<option value="${button.dataset.report}">${button.textContent}</option>`)
+    .join('');
+
+  // The current report can be filtered out by a feature flag or a role
+  // change, which would otherwise leave the dropdown on a stale value.
+  if (tabs.some((button) => button.dataset.report === reportTab)) {
+    select.value = reportTab;
+  } else if (tabs.length) {
+    select.value = tabs[0].dataset.report;
+  }
+
+  switchEl.classList.toggle('hidden', !tabs.length);
 }
 
 const FEATURE_REPORT_TABS = {
@@ -5085,6 +5124,7 @@ function renderReportTabs() {
   if (currentUser && !active.includes(reportTab) && !BASE_REPORT_TABS.includes(reportTab)) {
     setReportTab('sales');
   }
+  syncReportTabSelect();
 }
 
 function isFeatureReportTab(tab) {
@@ -5120,6 +5160,23 @@ function setReportView(value) {
   const valid = getReportViewOptions().some((option) => option.value === value) ? value : 'text';
   reportViews[reportTab] = valid;
   localStorage.setItem('ff_report_views', JSON.stringify(reportViews));
+  renderReports();
+}
+
+const REPORT_LAYOUT_OPTIONS = [
+  { value: 'table', label: 'Table' },
+  { value: 'cards', label: 'Cards' }
+];
+
+function getReportLayout() {
+  const saved = reportLayouts[reportTab];
+  return REPORT_LAYOUT_OPTIONS.some((option) => option.value === saved) ? saved : 'table';
+}
+
+function setReportLayout(value) {
+  const valid = REPORT_LAYOUT_OPTIONS.some((option) => option.value === value) ? value : 'table';
+  reportLayouts[reportTab] = valid;
+  localStorage.setItem('ff_report_layouts', JSON.stringify(reportLayouts));
   renderReports();
 }
 
@@ -7007,6 +7064,25 @@ function renderReports() {
     viewSelect.value = currentView;
   }
 
+  const layoutSelect = document.getElementById('report-layout-select');
+  const layoutSwitch = document.getElementById('report-layout-switch');
+  // Cards need a column-driven table, so the control is hidden for graph
+  // views and for any report that does not expose columns. The card styles
+  // are desktop-only, so narrow windows always fall back to the table rather
+  // than showing unstyled cards behind a hidden control.
+  const canUseLayouts = Array.isArray(def.columns)
+    && def.columns.length > 0
+    && (window.matchMedia ? window.matchMedia('(min-width: 721px)').matches : true);
+  if (layoutSelect) {
+    layoutSelect.innerHTML = REPORT_LAYOUT_OPTIONS.map((option) => `<option value="${option.value}">${escapeHtml(option.label)}</option>`).join('');
+    layoutSelect.value = getReportLayout();
+  }
+  if (layoutSwitch) {
+    const currentView = getReportView();
+    const graphActive = currentView !== 'text' && getReportGraphConfig(currentView);
+    layoutSwitch.classList.toggle('hidden', Boolean(graphActive) || !canUseLayouts);
+  }
+
   document.getElementById('report-title').textContent = def.title;
   document.getElementById('report-subtitle').textContent = def.subtitle;
 
@@ -7022,6 +7098,12 @@ function renderReports() {
   const pageRows = def.rows.slice((reportPage - 1) * REPORT_PAGE_SIZE, reportPage * REPORT_PAGE_SIZE);
 
   const container = document.getElementById('report-table');
+  if (getReportLayout() === 'cards' && canUseLayouts) {
+    renderReportCards(def, pageRows, container, term);
+    renderReportPagination(def.rows.length, totalPages);
+    return;
+  }
+
   container.innerHTML = `
     <table class="report-table">
       <thead>
@@ -7035,7 +7117,7 @@ function renderReports() {
             <tr${row._saleId !== undefined ? ` class="report-clickable-row" data-sale-id="${row._saleId}" onclick="openTableSaleDetail(Number(this.dataset.saleId))" title="View full order details"` : ''}>
               ${def.columns.map((column) => {
                 const value = row[column.key];
-                return `<td class="${column.money ? 'num' : ''}${column.cellClass ? ' ' + column.cellClass(value) : ''}">${column.money ? formatCurrency(value) : (value ?? '—')}</td>`;
+                return `<td class="${column.money ? 'num' : ''}${column.cellClass ? ' ' + column.cellClass(value) : ''}">${column.money ? formatCurrency(value) : escapeHtml(value ?? '—')}</td>`;
               }).join('')}
             </tr>
           `).join('')
@@ -7055,6 +7137,62 @@ function renderReports() {
   `;
 
   renderReportPagination(def.rows.length, totalPages);
+}
+
+function renderReportCards(def, pageRows, container, term) {
+  const cellHtml = (column, row) => {
+    const value = row[column.key];
+    const money = column.money ? formatCurrency(value) : escapeHtml(value ?? '—');
+    const extra = column.cellClass ? ' ' + column.cellClass(value) : '';
+    return `
+      <div class="report-card-row${column.money ? ' num' : ''}${extra}">
+        <span class="report-card-label">${escapeHtml(column.label)}</span>
+        <span class="report-card-value">${money}</span>
+      </div>
+    `;
+  };
+
+  const clickAttrs = (row) => row._saleId !== undefined
+    ? ` class="report-card report-clickable-row" data-sale-id="${row._saleId}" onclick="openTableSaleDetail(Number(this.dataset.saleId))" title="View full order details"`
+    : ' class="report-card"';
+
+  const cards = pageRows.length
+    ? pageRows.map((row) => `
+        <div${clickAttrs(row)}>
+          <div class="report-card-head">
+            <span class="report-card-title">${escapeHtml(row[def.columns[0].key] ?? '—')}</span>
+            <span class="report-card-meta">${def.columns.length - 1} field(s)</span>
+          </div>
+          <div class="report-card-body">
+            ${def.columns.slice(1).map((column) => cellHtml(column, row)).join('')}
+          </div>
+        </div>
+      `).join('')
+    : `<div class="report-cards-empty"><div class="report-empty">${term ? 'No results match your search.' : 'No data for this report.'}</div></div>`;
+
+  const totalsCard = def.totals && !term
+    ? `
+      <div class="report-card report-card-totals">
+        <div class="report-card-head">
+          <span class="report-card-title">${escapeHtml(def.totalsLabel || 'Summary')}</span>
+        </div>
+        <div class="report-card-body">
+          ${def.columns.slice(1).map((column) => {
+            const value = def.totals[column.key];
+            if (value === undefined) return '';
+            return `
+              <div class="report-card-row${column.money ? ' num' : ''}">
+                <span class="report-card-label">${escapeHtml(column.label)}</span>
+                <span class="report-card-value">${column.money ? formatCurrency(value) : escapeHtml(value)}</span>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `
+    : '';
+
+  container.innerHTML = `<div class="report-cards">${cards}</div>${totalsCard}`;
 }
 
 function renderReportPagination(totalRows, totalPages) {
@@ -12331,6 +12469,10 @@ function bootReady() {
     const savedViews = JSON.parse(localStorage.getItem('ff_report_views') || '{}');
     if (savedViews && typeof savedViews === 'object') reportViews = savedViews;
   } catch (error) {}
+  try {
+    const savedLayouts = JSON.parse(localStorage.getItem('ff_report_layouts') || '{}');
+    if (savedLayouts && typeof savedLayouts === 'object') reportLayouts = savedLayouts;
+  } catch (error) {}
 
   const menuSearch = document.getElementById('menu-search');
   if (menuSearch) {
@@ -12462,6 +12604,19 @@ function bootReady() {
     if (!document.hidden) lightRefresh();
   });
   window.addEventListener('resize', updateMenuScrollButtons);
+  // The revenue chart sizes its viewBox to the container, so it has to be
+  // redrawn when the window changes (rotating a phone, resizing the app).
+  let revenueChartResizeTimer = null;
+  let lastRevenueChartWidth = 0;
+  window.addEventListener('resize', () => {
+    if (!document.getElementById('revenue-line-chart')) return;
+    if (document.getElementById('revenue-line-chart').clientWidth === lastRevenueChartWidth) return;
+    clearTimeout(revenueChartResizeTimer);
+    revenueChartResizeTimer = setTimeout(() => {
+      lastRevenueChartWidth = document.getElementById('revenue-line-chart').clientWidth;
+      renderRevenueChart();
+    }, 180);
+  });
   setInterval(applyTimeGreeting, 30000);
   setInterval(() => { if (currentUser) saveRecoverySnapshot(); }, 60000);
   window.addEventListener('beforeunload', () => { if (currentUser) saveRecoverySnapshot(); });
