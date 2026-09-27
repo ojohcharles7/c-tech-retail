@@ -1430,6 +1430,39 @@
               </div>
             </div>
 
+            <div class="card-panel connect-url-card">
+              <div class="card-title-row">
+                <span class="card-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18"/></svg></span>
+                <div>
+                  <h3>Connect another device</h3>
+                  <p>Type this address into the browser on any phone, tablet or till on the same Wi-Fi. The installer writes it, and it is refreshed every time this PC starts.</p>
+                </div>
+              </div>
+              <div class="connect-url-list">
+                <div class="connect-url-row">
+                  <div class="connect-url-head">
+                    <span class="connect-url-label">Other devices</span>
+                    <span class="connect-url-note" id="connect-url-note">Detecting the address&hellip;</span>
+                  </div>
+                  <div class="connect-url-actions">
+                    <code class="connect-url-value" id="connect-url-lan">&hellip;</code>
+                    <button class="action-btn secondary small-btn" type="button" onclick="copyConnectUrl()">Copy</button>
+                  </div>
+                </div>
+                <div class="connect-url-row">
+                  <div class="connect-url-head">
+                    <span class="connect-url-label">This computer</span>
+                    <span class="connect-url-note">Works even if the address above changes</span>
+                  </div>
+                  <div class="connect-url-actions">
+                    <code class="connect-url-value" id="connect-url-local">http://localhost:5501</code>
+                    <button class="action-btn secondary small-btn" type="button" onclick="copyConnectUrl('local')">Copy</button>
+                  </div>
+                </div>
+              </div>
+              <p class="form-hint" id="connect-url-warning"></p>
+            </div>
+
             <div class="card-panel full-package-card">
               <div class="card-title-row">
                 <span class="card-icon amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 15 8l6 1-4.5 4.3 1.1 6L12 16.3 6.4 19.3l1.1-6L3 9l6-1z"/></svg></span>

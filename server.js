@@ -246,6 +246,11 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  if (pathname === '/api/connect' && req.method === 'GET') {
+    sendJson(res, 200, getConnectInfo());
+    return;
+  }
+
   const relPath = pathname === '/' ? 'pos-1.html' : pathname.replace(/^\/+/, '');
   const filePath = path.join(ROOT, relPath);
   if (!filePath.startsWith(ROOT)) {
@@ -279,6 +284,50 @@ function getNetworkAddresses() {
     }
   }
   return addresses;
+}
+
+const VIRTUAL_ADAPTER = /hyper-v|vmware|virtualbox|tunnels|tap|wireguard|openvpn|wintun|loopback|bluetooth|internet sharing|ndis|tether|phone link/i;
+
+// The address setup-admin.cmd / start-pos.cmd wrote at install or logon
+// time. It is the one the Edge shortcut and the printed URL use, so the
+// app must agree with them rather than picking its own.
+function readPublishedConnect() {
+  try {
+    const raw = fs.readFileSync(path.join(ROOT, 'connect.json'), 'utf8');
+    const parsed = JSON.parse(raw.replace(/^\uFEFF/, ''));
+    if (parsed && parsed.ip) return parsed;
+  } catch (error) {
+    // No connect.json yet, or it is unreadable - fall through to live detection.
+  }
+  return null;
+}
+
+function getConnectInfo() {
+  const published = readPublishedConnect();
+  if (published) {
+    return {
+      ...published,
+      port: Number(published.port) || PORT,
+      localUrl: `http://localhost:${Number(published.port) || PORT}`,
+      source: 'connect.json'
+    };
+  }
+
+  // Server started by hand, or before the installer ever ran. Work the
+  // address out live so the app still shows something usable.
+  const live = getNetworkAddresses().filter((entry) => !VIRTUAL_ADAPTER.test(entry.name));
+  const address = live.length ? live[0].address : 'localhost';
+  return {
+    ip: address,
+    port: PORT,
+    url: `http://${address}:${PORT}`,
+    localUrl: `http://localhost:${PORT}`,
+    host: os.hostname(),
+    adapter: live.length ? live[0].name : '',
+    candidates: getNetworkAddresses().map((entry) => entry.address),
+    updatedAt: new Date().toISOString(),
+    source: 'live'
+  };
 }
 
 async function start() {

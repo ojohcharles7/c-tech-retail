@@ -610,16 +610,26 @@ select:focus {
   border-color: var(--line-strong);
 }
 
+/* The Sign In button is the one call to action on the login screen,
+   so it is filled solid red rather than an outline. */
 #login-view .primary-btn {
-  background: transparent;
-  box-shadow: none;
-  border: 1px solid var(--line);
+  background: var(--grad-primary);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 10px 20px rgba(185, 28, 28, 0.28);
 }
 
 #login-view .primary-btn:hover {
-  background: transparent;
-  border-color: var(--line-strong);
-  color: var(--primary);
+  background: var(--grad-primary);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 14px 26px rgba(185, 28, 28, 0.36);
+}
+
+#login-view .primary-btn:active {
+  background: var(--grad-primary);
+  color: #fff;
+  border-color: transparent;
 }
 
 .primary-btn:hover, .action-btn:hover, .logout-btn:hover, .nav-btn:hover {
@@ -9705,4 +9715,69 @@ html[data-theme="dark"] .panel-sub {
 .report-view .table-wrap td.diff-shortage {
   color: #b91c1c;
   font-weight: 800;
+}
+
+
+/* ---- Connect another device (Settings) ---- */
+
+.connect-url-card {
+  grid-column: 1 / -1;
+}
+
+.connect-url-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.connect-url-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel-alt);
+}
+
+.connect-url-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.connect-url-label {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.connect-url-note {
+  font-size: 11.5px;
+  color: var(--text-soft);
+}
+
+.connect-url-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.connect-url-value {
+  font-family: monospace;
+  font-size: 13px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--panel-muted);
+  color: var(--text);
+  user-select: all;
+  overflow-wrap: anywhere;
+}
+
+#connect-url-warning {
+  margin-top: 10px;
 }

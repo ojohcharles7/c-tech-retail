@@ -4,3 +4,8 @@ desktop.ini
 node_modules/
 backups/
 
+# generated per machine by setup-admin.cmd / start-pos.cmd
+connect.json
+install-log.txt
+Charitech Retail.lnk
+

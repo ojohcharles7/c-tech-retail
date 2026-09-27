@@ -31,26 +31,33 @@ PostgreSQL must be running. It is a Windows service
 ### First-time host setup
 
 Install **PostgreSQL 18** first (from postgresql.org, accept the defaults —
-the installer sets the `postgres` superuser password). Then copy this project
-folder across and run, right-click → **Run as administrator**:
+the installer sets the `postgres` superuser password), install Node.js if you
+have not already, then copy this project folder across and run:
 
 ```
 setup-admin.cmd
 ```
 
-It does five things and then starts the server:
+It **elevates itself**, so a plain double-click is enough — you do not need
+right-click → Run as administrator. Add `/S` to run it silently.
+
+It does six things and then starts the server:
 
 1. Verifies `node.exe` and `server.js` are present (edit the `FF_NODE` line at
    the top of the script if Node is somewhere unusual)
-2. Stops a POS server that is already running, so port 5501 is free
+2. Stops a POS server that is already running, waits for port 5501 to actually
+   clear, and clears a leftover `node.exe` still holding the port
 3. Calls `pg-setup.ps1`, which configures PostgreSQL and creates the database
    (see below)
 4. Opens TCP 5501 in Windows Firewall on all profiles
 5. Registers a **boot-start scheduled task** called `FasterFoodPOS` that runs
-   the server as `SYSTEM`, then starts it and waits for port 5501 to answer
+   the server as `SYSTEM`, then starts it and waits for port 5501 to answer,
+   retrying the start if the scheduler swallows the first request
+6. Publishes the current LAN address to `connect.json` and registers the two
+   logon tasks described in [What it registers](#what-it-registers)
 
 After this you never start the server by hand again — it comes up with the PC,
-before anyone logs in.
+before anyone logs in, and the app window opens by itself at every logon.
 
 Every step checks the current state before changing it, so re-running the
 script on a working install is safe and reports "already correct".
@@ -282,19 +289,21 @@ working.
 3. Copy the project folder across — clone the repo, or copy the directory.
    You need at least `server.js`, `db.js`, `pos.js`, `pos-1.html`, `style.css`,
    `logo.png`, `log.png`, `find-server.html`, `menu-online.html`,
-   `package.json`, `package-lock.json`, `setup-admin.cmd` and `pg-setup.ps1`.
+   `package.json`, `package-lock.json`, `setup-admin.cmd`, `pg-setup.ps1`,
+   `connect-info.ps1` and `start-pos.cmd`.
 4. Delete `node_modules\` if you copied it, then restore dependencies:
    ```
    npm install
    ```
 5. Put the dump next to the project as `restore.dump`, or in
    `backups\install\latest.dump`.
-6. Right-click `setup-admin.cmd` → **Run as administrator**, and answer **Y**
-   when offered the restore.
+6. Run `setup-admin.cmd` and answer **Y** when offered the restore. It
+   elevates itself, so a plain double-click is enough.
 
 It configures PostgreSQL, creates `ffapp` / `fasterfood`, restores the dump,
-registers the boot task, and starts the server. It prints the URL terminals
-should use, detected from the new machine's own adapter.
+registers the boot task and the two logon tasks, and starts the server. It
+prints the URL terminals should use, detected from the new machine's own
+adapter, and the app window opens by itself at every logon.
 
 ### 3. Point the terminals at the new PC
 
@@ -324,11 +333,55 @@ the same way. Nothing is lost as long as you keep the file.
 
 ## Production (keep the server running)
 
-### Scheduled task (default)
+### One-time install (recommended, no extra software)
 
-Already handled by `setup-admin.cmd` — no extra software. The `FasterFoodPOS`
-task triggers **at startup**, runs as `SYSTEM`, has no execution time limit,
-and restarts up to 999 times at 1-minute intervals after a crash.
+Run `setup-admin.cmd` once, as Administrator. It elevates itself, so a plain
+double-click is enough. Add `/S` for a silent, unattended run.
+
+```
+setup-admin.cmd          # asks before restoring a dump
+setup-admin.cmd /S       # silent, keeps any existing data
+```
+
+It does the whole job in six steps: check Node.js, stop any running server,
+check PostgreSQL, open the firewall port, register the boot task, and publish
+the connect address. Re-run it any time — it is safe to run again and repairs
+whatever has drifted.
+
+The last run is kept in `install-log.txt`.
+
+### What it registers
+
+Three scheduled tasks, and **no** Startup folder entry:
+
+| Task | Runs as | When | Does |
+| --- | --- | --- | --- |
+| `FasterFoodPOS` | `SYSTEM` | every boot | `node.exe server.js` on port 5501 |
+| `FasterFoodPOS Launcher` | you, **with** admin rights | every logon, 45 s delay | `start-pos.cmd` |
+| `FasterFoodPOS App` | you, **without** admin rights | started by the launcher | opens the Edge app window |
+
+The app window is deliberately a **separate, non-elevated** task, so the
+browser that shows the POS never runs with administrator rights.
+
+`start-pos.cmd` is the light half of the job. At every logon it:
+
+1. waits for the server to answer on port 5501 (60 s),
+2. starts `FasterFoodPOS` itself if the server is not up yet,
+3. rewrites `connect.json` with the **current** LAN address,
+4. rewrites `Charitech Retail.lnk` in the project folder to match,
+5. re-registers `FasterFoodPOS App` with that address and runs it.
+
+Every step is written to `start-pos.log`; a failed step is logged and the
+launcher moves on rather than blocking the logon. You can also run
+`start-pos.cmd` by hand at any time to redo all of it.
+
+### Scheduled task (details)
+
+The `FasterFoodPOS` task triggers **at startup**, runs as `SYSTEM`, has no
+execution time limit, and restarts up to 999 times at 1-minute intervals after
+a crash. It is also allowed to start and keep running **on battery power** —
+without that, a laptop that is unplugged leaves the task sitting in
+`Queued` forever and the server never comes up.
 
 To inspect or control it:
 
@@ -340,7 +393,8 @@ schtasks /end   /tn "FasterFoodPOS"
 
 The **Last Run Result** column in Task Scheduler is the place to look when the
 server does not come up after a reboot. `0x1` usually means the `node.exe`
-path is wrong or its drive was not ready yet.
+path is wrong or its drive was not ready yet. A state of `Queued` with
+`0x0` means it never started at all — check the battery setting above.
 
 To re-register it after moving Node or the project, just run
 `setup-admin.cmd` again.
@@ -472,8 +526,34 @@ almost always a wrong `node.exe` path or a drive that was not ready. Fix the
 `FF_NODE` line in `setup-admin.cmd` and re-run it. `0x41301` means "task is
 currently running", which is what you want to see.
 
+**Server doesn't start, and the task is stuck in `Queued` with `0x0`** — the
+task was never allowed to launch. On a laptop this is almost always the
+"run only on AC power" setting: Task Scheduler's default blocks a start while
+on battery and leaves the task `Queued` indefinitely. `setup-admin.cmd` now
+registers the task with `-AllowStartIfOnBatteries -DontStopIfGoingOnBatteries`,
+so re-running it fixes this. To confirm the setting on an existing install:
+```
+schtasks /query /tn "FasterFoodPOS" /xml
+```
+Look for `DisallowStartIfOnBatteries` and `StopIfGoingOnBatteries` — both
+should be absent or `false`.
+
 **Nothing is listening on 5501** — the task never started, or the project
 folder moved. Re-run `setup-admin.cmd`.
+
+**The app window does not open at logon** — the launcher keeps its own log:
+```
+type start-pos.log
+```
+It records each step and never blocks the logon, so a failed step is safe to
+ignore until the next boot. The most common cause is the server not answering
+within 60 s, in which case the launcher does not open the app at all rather
+than showing a connection error. Check that `FasterFoodPOS` is running first.
+
+**The app opens at the wrong address** — `connect-info.ps1` picks the first
+active, non-virtual IPv4 adapter, so on a PC with both Wi-Fi and Ethernet it may
+choose the wrong one. Connect to the network the till actually uses, or check
+`connect.json` to see what was picked. See [Fixed IP](#fixed-ip).
 
 **Port 5501 already in use** — you are running `npm start` while the
 `FasterFoodPOS` task is also running. Stop the manual one:

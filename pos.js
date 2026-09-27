@@ -8241,6 +8241,7 @@ function clearAudit() {
 function renderSettings() {
   const scroller = document.scrollingElement || document.documentElement;
   const pos = { top: scroller.scrollTop, left: scroller.scrollLeft };
+  loadConnectInfo();
   const settings = getFromStorage(STORAGE_KEYS.settings);
   const config = settings || defaultSettings;
   document.getElementById('shop-name').value = config.shopName || '';
@@ -8343,6 +8344,73 @@ function formatTerminalIdentity() {
   const system = getTerminalSystemLabel();
   if (ip) return `This machine: ${system} · IP ${ip} · server ${location.hostname}:${location.port || '5501'}`;
   return 'Detecting this machine\u2019s IP…';
+}
+
+let connectInfo = null;
+let connectInfoFetchedAt = 0;
+
+function connectPort() {
+  return (connectInfo && connectInfo.port) || Number(location.port) || 5501;
+}
+
+function connectUrl(which) {
+  const port = connectPort();
+  if (which === 'local') return (connectInfo && connectInfo.localUrl) || `http://localhost:${port}`;
+  return (connectInfo && connectInfo.url) || `http://${location.hostname}:${port}`;
+}
+
+function renderConnectInfo(info) {
+  connectInfo = info || null;
+  const lanEl = document.getElementById('connect-url-lan');
+  const localEl = document.getElementById('connect-url-local');
+  const noteEl = document.getElementById('connect-url-note');
+  const warnEl = document.getElementById('connect-url-warning');
+  if (!lanEl || !localEl) return;
+
+  lanEl.textContent = connectUrl();
+  localEl.textContent = connectUrl('local');
+
+  if (noteEl) {
+    if (info && info.source === 'connect.json') {
+      noteEl.textContent = info.adapter ? `set by the installer, from ${info.adapter}` : 'set by the installer';
+    } else {
+      noteEl.textContent = 'detected live — run setup-admin.cmd to pin it';
+    }
+  }
+
+  if (warnEl) {
+    const others = info && Array.isArray(info.candidates)
+      ? info.candidates.filter((address) => address !== info.ip)
+      : [];
+    warnEl.textContent = others.length
+      ? `Other addresses on this PC: ${others.join(', ')}. Reserve ${info.ip} in your router so it never changes.`
+      : `Reserve ${(info && info.ip) || location.hostname} in your router (192.168.0.1) so it never changes.`;
+  }
+}
+
+async function loadConnectInfo() {
+  if (!document.getElementById('connect-url-lan')) return;
+  if (connectInfo && Date.now() - connectInfoFetchedAt < 60000) return;
+  try {
+    const res = await fetch(API_BASE + '/api/connect', { cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    renderConnectInfo(await res.json());
+    connectInfoFetchedAt = Date.now();
+  } catch (error) {
+    renderConnectInfo(null);
+  }
+}
+
+function copyConnectUrl(which) {
+  const text = connectUrl(which);
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(
+      () => showToast(`Copied ${text}`, 'success'),
+      () => showToast('Could not copy it — select the address instead.', 'error')
+    );
+    return;
+  }
+  showToast('Copy is not available here — select the address instead.', 'error');
 }
 
 function setSystemPreset(name) {
