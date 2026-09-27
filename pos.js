@@ -226,7 +226,7 @@ function initAppInstall() {
     // Hold on to the event; browsers allow one prompt per user gesture.
     event.preventDefault();
     deferredInstallPrompt = event;
-    hideInstallHelp();
+    closeInstallHelp();
     showInstallButton();
   });
 
